@@ -6,6 +6,8 @@ def test_readme_documents_entrypoints_lifecycle_and_stop_recovery_contract() -> 
 
     assert "charles_mcp.main" in readme
     assert "CHARLES_MANAGE_LIFECYCLE" in readme
+    assert "CHARLES_USER" in readme
+    assert "admin" in readme
     assert "start_live_capture" in readme
     assert "read_live_capture" in readme
     assert "group_capture_analysis" in readme
@@ -15,5 +17,8 @@ def test_readme_documents_entrypoints_lifecycle_and_stop_recovery_contract() -> 
     assert "PowerShell" in readme
     assert "Windows CMD" in readme
     assert "Git Bash / Bash / Zsh" in readme
+    assert "Claude CLI" in readme
+    assert "Codex CLI" in readme
+    assert "Antigravity" in readme
     assert "README.en.md" in readme
     assert "docs/contracts/tools.md" in readme

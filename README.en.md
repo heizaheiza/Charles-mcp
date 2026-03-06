@@ -1,6 +1,6 @@
-﻿# Charles MCP Server
+# Charles MCP Server
 
-[中文 README](README.md) | [Tool Contract](docs/contracts/tools.md)
+[Chinese README](README.md) | [Tool Contract](docs/contracts/tools.md)
 
 Charles MCP Server integrates Charles Proxy with MCP clients and is designed for agent-driven traffic inspection.
 
@@ -73,7 +73,7 @@ python charles-mcp-server.py
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `CHARLES_USER` | `tower` | Charles Web Interface username |
+| `CHARLES_USER` | `admin` | Charles Web Interface username |
 | `CHARLES_PASS` | `123456` | Charles Web Interface password |
 | `CHARLES_PROXY_HOST` | `127.0.0.1` | Charles proxy host |
 | `CHARLES_PROXY_PORT` | `8888` | Charles proxy port |
@@ -89,7 +89,7 @@ python charles-mcp-server.py
 ### PowerShell
 
 ```powershell
-$env:CHARLES_USER = "tower"
+$env:CHARLES_USER = "admin"
 $env:CHARLES_PASS = "123456"
 $env:CHARLES_PROXY_HOST = "127.0.0.1"
 $env:CHARLES_PROXY_PORT = "8888"
@@ -100,7 +100,7 @@ charles-mcp
 ### Windows CMD
 
 ```cmd
-set CHARLES_USER=tower
+set CHARLES_USER=admin
 set CHARLES_PASS=123456
 set CHARLES_PROXY_HOST=127.0.0.1
 set CHARLES_PROXY_PORT=8888
@@ -111,7 +111,7 @@ charles-mcp
 ### Git Bash / Bash / Zsh
 
 ```bash
-export CHARLES_USER=tower
+export CHARLES_USER=admin
 export CHARLES_PASS=123456
 export CHARLES_PROXY_HOST=127.0.0.1
 export CHARLES_PROXY_PORT=8888
@@ -129,13 +129,15 @@ python -c "from charles_mcp.main import main; main()"
 
 ### Generic stdio MCP configuration
 
+Use this when your MCP client supports `command + args + env`.
+
 ```json
 {
   "mcpServers": {
     "charles": {
       "command": "charles-mcp",
       "env": {
-        "CHARLES_USER": "tower",
+        "CHARLES_USER": "admin",
         "CHARLES_PASS": "123456",
         "CHARLES_MANAGE_LIFECYCLE": "false"
       }
@@ -144,16 +146,81 @@ python -c "from charles_mcp.main import main; main()"
 }
 ```
 
-### Python entrypoint configuration
+### Claude CLI
+
+The official Claude Code / Claude CLI flow supports adding stdio MCP servers with `claude mcp add-json`:
+
+```bash
+claude mcp add-json charles '{
+  "type": "stdio",
+  "command": "charles-mcp",
+  "env": {
+    "CHARLES_USER": "admin",
+    "CHARLES_PASS": "123456",
+    "CHARLES_MANAGE_LIFECYCLE": "false"
+  }
+}'
+```
+
+For repository-local development, point Claude CLI at the project entrypoint directly:
+
+```bash
+claude mcp add-json charles '{
+  "type": "stdio",
+  "command": "python",
+  "args": ["E:/project/Charles-mcp/charles-mcp-server.py"],
+  "env": {
+    "CHARLES_USER": "admin",
+    "CHARLES_PASS": "123456",
+    "CHARLES_MANAGE_LIFECYCLE": "false"
+  }
+}'
+```
+
+Verify the server entry:
+
+```bash
+claude mcp get charles
+```
+
+### Codex CLI
+
+Codex CLI reads MCP servers from `~/.codex/config.toml`. Recommended configuration:
+
+```toml
+[mcp_servers.charles]
+command = "charles-mcp"
+
+[mcp_servers.charles.env]
+CHARLES_USER = "admin"
+CHARLES_PASS = "123456"
+CHARLES_MANAGE_LIFECYCLE = "false"
+```
+
+Repository-local development variant:
+
+```toml
+[mcp_servers.charles]
+command = "python"
+args = ["E:/project/Charles-mcp/charles-mcp-server.py"]
+
+[mcp_servers.charles.env]
+CHARLES_USER = "admin"
+CHARLES_PASS = "123456"
+CHARLES_MANAGE_LIFECYCLE = "false"
+```
+
+### Antigravity
+
+Antigravity supports editing raw `mcpServers` JSON through its MCP management UI. Add a config like this in `Manage MCP Servers` or `View raw config`:
 
 ```json
 {
   "mcpServers": {
     "charles": {
-      "command": "python",
-      "args": ["-c", "from charles_mcp.main import main; main()"],
+      "command": "charles-mcp",
       "env": {
-        "CHARLES_USER": "tower",
+        "CHARLES_USER": "admin",
         "CHARLES_PASS": "123456",
         "CHARLES_MANAGE_LIFECYCLE": "false"
       }
@@ -162,17 +229,17 @@ python -c "from charles_mcp.main import main; main()"
 }
 ```
 
-### Repository-local configuration
+Repository-local development variant:
 
 ```json
 {
   "mcpServers": {
     "charles": {
       "command": "python",
-      "args": ["charles-mcp-server.py"],
+      "args": ["E:/project/Charles-mcp/charles-mcp-server.py"],
       "cwd": "E:/project/Charles-mcp",
       "env": {
-        "CHARLES_USER": "tower",
+        "CHARLES_USER": "admin",
         "CHARLES_PASS": "123456",
         "CHARLES_MANAGE_LIFECYCLE": "false"
       }
@@ -181,6 +248,11 @@ python -c "from charles_mcp.main import main; main()"
 }
 ```
 
+### Direct Python entrypoint
+
+```bash
+python -c "from charles_mcp.main import main; main()"
+```
 ## Recommended usage flows
 
 ### Live analysis flow
@@ -309,5 +381,5 @@ python -c "from charles_mcp.main import main; main()"
 ```
 
 See also:
-- [中文 README](README.md)
+- [Chinese README](README.md)
 - [Tool Contract](docs/contracts/tools.md)
