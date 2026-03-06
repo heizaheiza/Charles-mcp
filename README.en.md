@@ -1,4 +1,4 @@
-# Charles MCP Server
+﻿# Charles MCP Server
 
 [Chinese README](README.md) | [Tool Contract](docs/contracts/tools.md)
 
@@ -168,7 +168,7 @@ For repository-local development, point Claude CLI at the project entrypoint dir
 claude mcp add-json charles '{
   "type": "stdio",
   "command": "python",
-  "args": ["E:/project/Charles-mcp/charles-mcp-server.py"],
+  "args": ["~/Charles-mcp/charles-mcp-server.py"],
   "env": {
     "CHARLES_USER": "admin",
     "CHARLES_PASS": "123456",
@@ -202,7 +202,7 @@ Repository-local development variant:
 ```toml
 [mcp_servers.charles]
 command = "python"
-args = ["E:/project/Charles-mcp/charles-mcp-server.py"]
+args = ["~/Charles-mcp/charles-mcp-server.py"]
 
 [mcp_servers.charles.env]
 CHARLES_USER = "admin"
@@ -236,8 +236,8 @@ Repository-local development variant:
   "mcpServers": {
     "charles": {
       "command": "python",
-      "args": ["E:/project/Charles-mcp/charles-mcp-server.py"],
-      "cwd": "E:/project/Charles-mcp",
+      "args": ["~/Charles-mcp/charles-mcp-server.py"],
+      "cwd": "~/Charles-mcp",
       "env": {
         "CHARLES_USER": "admin",
         "CHARLES_PASS": "123456",
@@ -383,3 +383,4 @@ python -c "from charles_mcp.main import main; main()"
 See also:
 - [Chinese README](README.md)
 - [Tool Contract](docs/contracts/tools.md)
+
