@@ -45,6 +45,24 @@ Core capabilities:
 - Charles Web Interface enabled
 - Charles proxy listening on `127.0.0.1:8888` unless overridden
 
+## Enable Charles Web Interface
+
+In Charles, open: `Proxy -> Web Interface Settings`
+
+Make sure the following settings are in place:
+
+- `Enable web interface` is checked
+- username: `admin`
+- password: `123456`
+
+Menu location:
+
+![Charles Web Interface Menu](docs/images/charles-web-interface-menu.png)
+
+Settings dialog:
+
+![Charles Web Interface Settings](docs/images/charles-web-interface-settings.png)
+
 ## Install
 
 ```bash
@@ -466,6 +484,20 @@ Useful local checks:
 python charles-mcp-server.py
 python -c "from charles_mcp.main import main; main()"
 ```
+
+## Support
+
+If this project helps your work, you can support future maintenance and iteration.
+
+### WeChat donation QR
+
+![WeChat donation QR](docs/images/wechat-donate.png)
+
+### USDT-TRC20
+
+`TCudxn9ByCxPZHXLtvqBjFmLWXywBoicRs`
+
+Thank you for the support.
 
 See also:
 - [Chinese README](README.md)
