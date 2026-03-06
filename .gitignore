@@ -9,6 +9,7 @@ venv/
 
 # Test and tool caches
 .pytest_cache/
+.tmp-pytest/
 .mypy_cache/
 .ruff_cache/
 
