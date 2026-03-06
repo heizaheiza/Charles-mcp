@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "charles-mcp"
+version = "2.0.0"
+description = "Charles Proxy MCP server with live capture, structured traffic analysis, and agent-friendly tool contracts"
+readme = {file = "README.en.md", content-type = "text/markdown"}
+license = {text = "MIT"}
+authors = [
+    {name = "7owe2"}
+]
+requires-python = ">=3.10"
+keywords = ["mcp", "charles", "proxy", "traffic-analysis", "network-debugging", "agent-tools"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: Proxy Servers",
+    "Topic :: Software Development :: Debuggers",
+]
+dependencies = [
+    "mcp>=1.0.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.7.0",
+    "jmespath>=1.0.1",
+    "typing_extensions>=4.0.0; python_version < \"3.11\"",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+charles-mcp = "charles_mcp.main:main"
+
+[project.urls]
+Homepage = "https://github.com/7owe2/Charles-mcp"
+Documentation = "https://github.com/7owe2/Charles-mcp/blob/main/README.en.md"
+Repository = "https://github.com/7owe2/Charles-mcp"
+Issues = "https://github.com/7owe2/Charles-mcp/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["charles_mcp*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "D", "UP"]
+ignore = ["D100", "D104", "D203", "D213"]
