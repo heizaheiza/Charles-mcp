@@ -317,6 +317,93 @@ Related warning values:
 - `stop_recording_retry_succeeded`
 - `stop_recording_failed_after_retry`
 
+## Summary-first contract
+
+The default contract is: do not pull large detail payloads first. Use grouped or summarized views before any drill-down.
+
+### `query_live_capture_entries`
+
+Use it for:
+- Structured analysis of the current live capture
+
+Key fields to rely on:
+- `items`
+- `matched_count`
+- `filtered_out_count`
+- `filtered_out_by_class`
+- `next_cursor`
+- `warnings`
+
+### `analyze_recorded_traffic`
+
+Use it for:
+- Structured analysis of saved `.chlsj` recordings
+
+Key fields to rely on:
+- `items`
+- `matched_count`
+- `filtered_out_count`
+- `filtered_out_by_class`
+- `warnings`
+
+### `group_capture_analysis`
+
+Use it for:
+- Lowest-token hotspot discovery before looking at per-entry summaries
+
+Supported grouping keys:
+- `host`
+- `path`
+- `response_status`
+- `resource_class`
+- `method`
+- `host_path`
+- `host_status`
+
+Key fields to rely on:
+- `groups`
+- `matched_count`
+- `filtered_out_count`
+- `filtered_out_by_class`
+- `warnings`
+
+## Token optimization rules
+
+Analysis tools filter noisy traffic by default. The default contract is tuned for agent usage, not for full raw dump fidelity.
+
+Traffic classes filtered or deprioritized by default:
+- `control.charles`
+- `CONNECT`
+- `static_asset`
+- `media`
+- `font`
+- other low-value noisy requests
+
+Recommended defaults:
+- keep `preset="api_focus"`
+- keep `max_items` small
+- do not request `include_full_body=true` unless there is a concrete reason
+- prefer `group_capture_analysis` before `query_live_capture_entries`
+
+If output is reduced, the agent should inspect:
+- `truncated`
+- `filtered_out_count`
+- `filtered_out_by_class`
+
+## Detail drill-down contract
+
+### `get_traffic_entry_detail`
+
+Recommended usage:
+- inspect one confirmed entry in depth
+- do not use it as the first step of a bulk analysis flow
+
+Recommended rules:
+1. identify the target `entry_id` through summary or group results first
+2. call `get_traffic_entry_detail`
+3. do not default to `include_full_body=true`
+4. do not default to `include_sensitive=true`
+
 ## Main tools
 
 ### Live tools

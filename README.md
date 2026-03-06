@@ -365,6 +365,94 @@ agent 应该：
 - `stop_recording_retry_succeeded`
 - `stop_recording_failed_after_retry`
 
+## summary-first 契约
+
+默认契约是：不要一上来就拉大体积 detail。先看 group 或 summary，再决定是否 drill-down。
+
+### `query_live_capture_entries`
+
+适用：
+- 对当前 live capture 做结构化分析
+
+返回重点：
+- `items`
+- `matched_count`
+- `filtered_out_count`
+- `filtered_out_by_class`
+- `next_cursor`
+- `warnings`
+
+### `analyze_recorded_traffic`
+
+适用：
+- 对历史 `.chlsj` 记录做结构化分析
+
+返回重点：
+- `items`
+- `matched_count`
+- `filtered_out_count`
+- `filtered_out_by_class`
+- `warnings`
+
+### `group_capture_analysis`
+
+适用：
+- 在查看单条 summary 之前，先用最低 token 成本识别热点
+
+支持分组字段：
+- `host`
+- `path`
+- `response_status`
+- `resource_class`
+- `method`
+- `host_path`
+- `host_status`
+
+返回重点：
+- `groups`
+- `matched_count`
+- `filtered_out_count`
+- `filtered_out_by_class`
+- `warnings`
+
+## token 优化约束
+
+分析类工具默认会过滤高噪音流量。默认契约的目标是让 agent 更稳定，而不是返回全量原始 dump。
+
+默认过滤或降权：
+- `control.charles`
+- `CONNECT`
+- `static_asset`
+- `media`
+- `font`
+- 其他低价值高噪音请求
+
+推荐默认：
+- 保持 `preset="api_focus"`
+- 控制较小的 `max_items`
+- 没有明确必要时，不要请求 `include_full_body=true`
+- 先使用 `group_capture_analysis`
+- 再使用 `query_live_capture_entries`
+
+如果结果被裁剪，agent 应结合这些字段理解当前输出：
+- `truncated`
+- `filtered_out_count`
+- `filtered_out_by_class`
+
+## detail drill-down 契约
+
+### `get_traffic_entry_detail`
+
+推荐用途：
+- 对单条 entry 做精细分析
+- 不作为批量分析的第一步
+
+推荐规则：
+1. 先通过 summary 或 group 确定 `entry_id`
+2. 再调用 `get_traffic_entry_detail`
+3. 没有明确必要时，不要默认 `include_full_body=true`
+4. 没有明确必要时，不要默认 `include_sensitive=true`
+
 ## 主要工具
 
 ### Live tools
