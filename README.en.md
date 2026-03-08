@@ -297,6 +297,18 @@ python charles-mcp-server.py
 python -c "from charles_mcp.main import main; main()"
 ```
 
+## Support
+
+If this project helps your work, you can support future maintenance and iteration.
+
+### WeChat donation QR
+
+![WeChat donation QR](docs/images/wechat-donate.png)
+
+### USDT-TRC20
+
+`TCudxn9ByCxPZHXLtvqBjFmLWXywBoicRs`
+
 ## See Also
 
 - [Chinese README](README.md)

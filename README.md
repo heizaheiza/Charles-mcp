@@ -302,6 +302,18 @@ python charles-mcp-server.py
 python -c "from charles_mcp.main import main; main()"
 ```
 
+## 感谢支持
+
+如果这个项目对你有帮助，欢迎请我喝杯咖啡，支持后续维护与迭代。
+
+### 微信赞赏码
+
+![微信赞赏码](docs/images/wechat-donate.png)
+
+### USDT-TRC20
+
+`TCudxn9ByCxPZHXLtvqBjFmLWXywBoicRs`
+
 ## 另见
 
 - [English README](README.en.md)
