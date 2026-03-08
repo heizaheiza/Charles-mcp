@@ -4,8 +4,9 @@ import asyncio
 import json
 import logging
 import os
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any, Optional, cast
 
 from mcp.server.fastmcp import Context
 from pydantic import Field
@@ -48,6 +49,26 @@ class ToolDependencies:
     live_service: LiveCaptureService
     history_service: RecordingHistoryService
     traffic_query_service: TrafficQueryService
+    restore_config_fn: Callable[[Config], Awaitable[bool]]
+
+
+ToolContext = Context[Any, ToolDependencies, Any]
+_TOOL_DEPENDENCIES_ATTR = "_charles_tool_dependencies"
+
+
+def attach_tool_dependencies(server: Any, deps: ToolDependencies) -> None:
+    setattr(server, _TOOL_DEPENDENCIES_ATTR, deps)
+
+
+def get_tool_dependencies(ctx: ToolContext) -> ToolDependencies:
+    try:
+        return ctx.request_context.lifespan_context
+    except ValueError:
+        fastmcp = ctx.fastmcp
+        deps = getattr(fastmcp, _TOOL_DEPENDENCIES_ATTR, None)
+        if deps is None:
+            raise ValueError("Tool dependencies are unavailable outside of a request") from None
+        return cast(ToolDependencies, deps)
 
 
 RecordSeconds = Annotated[

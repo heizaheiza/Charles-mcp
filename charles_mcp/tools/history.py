@@ -21,18 +21,20 @@ from charles_mcp.tools.tool_contract import (
     HostContains,
     HttpMethodFilter,
     KeywordRegex,
-    ToolDependencies,
+    ToolContext,
     build_tool_guidance_error,
     build_traffic_query,
+    get_tool_dependencies,
     guidance_error_message,
     normalize_http_method,
     normalize_text_filter,
 )
 
 
-def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
+def register_history_tools(mcp: FastMCP) -> None:
     @mcp.tool()
     async def analyze_recorded_traffic(
+        ctx: ToolContext,
         recording_path: Optional[str] = None,
         preset: TrafficPreset = "api_focus",
         host_contains: Optional[str] = None,
@@ -59,6 +61,7 @@ def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
         scan_limit: int = 500,
     ) -> TrafficQueryResult:
         """Analyze a saved recording snapshot with compact summaries."""
+        deps = get_tool_dependencies(ctx)
         query = build_traffic_query(
             preset=preset,
             host_contains=host_contains,
@@ -91,6 +94,7 @@ def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
 
     @mcp.tool()
     async def get_traffic_entry_detail(
+        ctx: ToolContext,
         source: str,
         entry_id: str,
         capture_id: Optional[str] = None,
@@ -100,6 +104,7 @@ def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
         max_body_chars: int = 4096,
     ) -> TrafficDetailResult:
         """Load one traffic entry detail view for drill-down inspection."""
+        deps = get_tool_dependencies(ctx)
         return await deps.traffic_query_service.get_detail(
             source=source,
             entry_id=entry_id,
@@ -112,6 +117,7 @@ def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
 
     @mcp.tool()
     async def get_capture_analysis_stats(
+        ctx: ToolContext,
         source: str,
         capture_id: Optional[str] = None,
         recording_path: Optional[str] = None,
@@ -119,6 +125,7 @@ def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
         scan_limit: int = 500,
     ) -> CaptureAnalysisStatsResult:
         """Return coarse traffic class counts for a live capture or saved recording."""
+        deps = get_tool_dependencies(ctx)
         return await deps.traffic_query_service.get_stats(
             source=source,
             capture_id=capture_id,
@@ -129,6 +136,7 @@ def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
 
     @mcp.tool()
     async def group_capture_analysis(
+        ctx: ToolContext,
         source: str,
         group_by: TrafficGroupBy,
         capture_id: Optional[str] = None,
@@ -157,6 +165,7 @@ def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
         scan_limit: int = 500,
     ) -> CaptureAnalysisGroupsResult:
         """Group analyzed traffic so the agent can inspect hot spots with lower token cost."""
+        deps = get_tool_dependencies(ctx)
         query = build_traffic_query(
             preset=preset,
             host_contains=host_contains,
@@ -193,6 +202,7 @@ def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
 
     @mcp.tool()
     async def query_recorded_traffic(
+        ctx: ToolContext,
         host_contains: HostContains = None,
         http_method: HttpMethodFilter = None,
         keyword_regex: KeywordRegex = None,
@@ -200,6 +210,7 @@ def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
         keep_response: bool = True,
     ) -> RecordedTrafficQueryResult:
         """Query the latest saved recording. This tool never reads the live Charles session."""
+        deps = get_tool_dependencies(ctx)
         host_contains_normalized = normalize_text_filter(host_contains)
         method_normalized, method_error = normalize_http_method(http_method)
         if method_error:
@@ -229,13 +240,18 @@ def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
         )
 
     @mcp.tool()
-    async def list_recordings() -> RecordingListResult:
+    async def list_recordings(ctx: ToolContext) -> RecordingListResult:
         """List saved recording files using an explicit history-oriented tool name."""
+        deps = get_tool_dependencies(ctx)
         return deps.history_service.list_recordings_result()
 
     @mcp.tool()
-    async def get_recording_snapshot(path: Optional[str] = None) -> RecordingSnapshotResult:
+    async def get_recording_snapshot(
+        ctx: ToolContext,
+        path: Optional[str] = None,
+    ) -> RecordingSnapshotResult:
         """Load a saved recording snapshot. This tool never reads the live Charles session."""
+        deps = get_tool_dependencies(ctx)
         try:
             return await deps.history_service.get_snapshot_result(path)
         except Exception as exc:

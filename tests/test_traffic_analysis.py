@@ -166,8 +166,8 @@ def test_traffic_normalizer_redacts_sensitive_headers_and_body_fields() -> None:
     assert "top-secret" in (entry.response.body.preview_text or "")
     assert entry.request.body.kind == "json"
     assert entry.response.body.kind == "json"
-    assert entry.request.body.redactions_applied == []
-    assert entry.response.body.redactions_applied == []
+    assert entry.request.body.model_dump()["redactions_applied"] == []
+    assert entry.response.body.model_dump()["redactions_applied"] == []
 
 
 def test_traffic_normalizer_ignores_include_sensitive_flag() -> None:

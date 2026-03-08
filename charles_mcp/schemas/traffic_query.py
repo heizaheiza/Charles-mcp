@@ -35,6 +35,7 @@ class TrafficQuery(BaseModel):
     include_sensitive: bool = Field(
         default=False,
         description="Deprecated compatibility field. No longer affects returned traffic.",
+        deprecated=True,
     )
     include_body_preview: bool = True
     max_items: int = Field(default=20, ge=1, le=200)

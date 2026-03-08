@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp import FastMCP
 
 from charles_mcp.client import CharlesClientError
 from charles_mcp.schemas.status import (
@@ -14,37 +14,35 @@ from charles_mcp.schemas.status import (
 from charles_mcp.tools.tool_contract import (
     THROTTLING_PRESET_CHOICES,
     ThrottlingPreset,
-    ToolDependencies,
+    ToolContext,
+    get_tool_dependencies,
     safe_ctx_log,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def register_reset_tools(
-    mcp: FastMCP,
-    *,
-    deps: ToolDependencies,
-    restore_config_fn,
-) -> None:
+def register_reset_tools(mcp: FastMCP) -> None:
     @mcp.tool()
-    async def throttling(preset: ThrottlingPreset) -> str:
-        """设置弱网预设。"""
+    async def throttling(ctx: ToolContext, preset: ThrottlingPreset) -> str:
+        """Set a network throttling preset in Charles."""
         logger.info("Tool called: throttling(preset=%s)", preset)
+        deps = get_tool_dependencies(ctx)
 
         preset_clean = preset.strip()
         if not preset_clean:
             return (
-                "Error: 参数 `preset` 不能为空。"
-                "请使用固定预设值，例如: 3G / 4G / 5G / off / deactivate"
+                "Error: parameter `preset` cannot be empty. "
+                "Use one of the supported presets, for example: 3G / 4G / 5G / off / deactivate."
             )
 
         preset_lower = preset_clean.lower()
-        if preset_lower not in {value.lower() for value in THROTTLING_PRESET_CHOICES}:
+        supported = {value.lower() for value in THROTTLING_PRESET_CHOICES}
+        if preset_lower not in supported:
             return (
-                "Error: 参数 `preset` 无效。"
-                f"仅允许 {', '.join(THROTTLING_PRESET_CHOICES)}。"
-                "请重试，例如 throttling(\"3G\") 或 throttling(\"off\")。"
+                "Error: parameter `preset` is invalid. "
+                f"Supported values: {', '.join(THROTTLING_PRESET_CHOICES)}. "
+                'Retry with something like throttling("3G") or throttling("off").'
             )
 
         normalized_preset = "3G" if preset_lower in ("start", "on") else preset_clean
@@ -58,37 +56,40 @@ def register_reset_tools(
             return f"Error: {exc}"
 
     @mcp.tool()
-    async def reset_environment(ctx: Context) -> str:
-        """手动重置环境。"""
-        await safe_ctx_log(ctx, "info", "正在执行手动重置...")
+    async def reset_environment(ctx: ToolContext) -> str:
+        """Reset the Charles environment and restore the saved configuration."""
+        deps = get_tool_dependencies(ctx)
+        await safe_ctx_log(ctx, "info", "Running manual environment reset...")
         try:
-            await restore_config_fn(deps.config)
-            return "环境重置完成"
+            await deps.restore_config_fn(deps.config)
+            return "Environment reset completed"
         except Exception as exc:
-            logger.error("重置环境出错: %s", exc)
-            return f"重置出错: {exc}"
+            logger.error("Reset environment failed: %s", exc)
+            return f"Reset failed: {exc}"
 
     @mcp.tool()
-    async def list_sessions() -> list[dict]:
+    async def list_sessions(ctx: ToolContext) -> list[dict]:
         """List historical session files via the legacy tool name."""
         logger.info("Tool called: list_sessions()")
+        deps = get_tool_dependencies(ctx)
 
         recordings = deps.history_service.list_recordings_result()
         if not recordings.items:
-            return [{"message": "暂无录制文件"}]
+            return [{"message": "No recordings available"}]
         return [item.model_dump() for item in recordings.items]
 
     @mcp.tool()
-    async def charles_status() -> CharlesStatusResult:
-        """检查 Charles Proxy 连接状态。"""
+    async def charles_status(ctx: ToolContext) -> CharlesStatusResult:
+        """Check Charles connectivity and active live-capture state."""
         logger.info("Tool called: charles_status()")
+        deps = get_tool_dependencies(ctx)
 
         active_capture = deps.live_service.get_active_capture()
         result = CharlesStatusResult(
             config=CharlesStatusConfig(
                 proxy_url=deps.config.proxy_url,
                 base_url=deps.config.charles_base_url,
-                config_path=deps.config.config_path or "未检测到",
+                config_path=deps.config.config_path or "not_detected",
                 manage_charles_lifecycle=deps.config.manage_charles_lifecycle,
             ),
             live_capture=LiveCaptureRuntimeStatus(

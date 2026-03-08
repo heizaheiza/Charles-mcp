@@ -34,6 +34,7 @@ class HeaderKV(BaseModel):
     redacted: bool = Field(
         default=False,
         description="Deprecated compatibility field. Traffic is no longer redacted.",
+        deprecated=True,
     )
 
 
@@ -54,6 +55,7 @@ class BodyContent(BaseModel):
     redactions_applied: list[str] = Field(
         default_factory=list,
         description="Deprecated compatibility field. Always empty.",
+        deprecated=True,
     )
 
 
@@ -68,6 +70,7 @@ class HttpMessage(BaseModel):
     redactions_applied: list[str] = Field(
         default_factory=list,
         description="Deprecated compatibility field. Always empty.",
+        deprecated=True,
     )
 
 
@@ -127,6 +130,7 @@ class TrafficSummary(BaseModel):
     redactions_applied: list[str] = Field(
         default_factory=list,
         description="Deprecated compatibility field. Always empty.",
+        deprecated=True,
     )
     detail_available: bool = True
 
@@ -137,6 +141,7 @@ class TrafficDetail(BaseModel):
     sensitive_included: bool = Field(
         default=False,
         description="Deprecated compatibility field. Traffic is always returned in full.",
+        deprecated=True,
     )
     body_truncated: bool = False
     warnings: list[str] = Field(default_factory=list)

@@ -11,17 +11,19 @@ from charles_mcp.schemas.live_capture import (
     StopLiveCaptureResult,
 )
 from charles_mcp.schemas.traffic_query import TrafficPreset
-from charles_mcp.tools.tool_contract import ToolDependencies, build_traffic_query
+from charles_mcp.tools.tool_contract import ToolContext, build_traffic_query, get_tool_dependencies
 
 
-def register_live_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
+def register_live_tools(mcp: FastMCP) -> None:
     @mcp.tool()
     async def start_live_capture(
+        ctx: ToolContext,
         reset_session: bool = True,
         include_existing: bool = False,
         adopt_existing: bool = False,
     ) -> LiveCaptureStartResult:
         """Start or adopt a live capture session for incremental polling."""
+        deps = get_tool_dependencies(ctx)
         try:
             return await deps.live_service.start(
                 reset_session=reset_session,
@@ -33,11 +35,13 @@ def register_live_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
 
     @mcp.tool()
     async def read_live_capture(
+        ctx: ToolContext,
         capture_id: str,
         cursor: Optional[int] = None,
         limit: int = 50,
     ) -> LiveCaptureReadResult:
         """Read incremental traffic from the current Charles session without history fallback."""
+        deps = get_tool_dependencies(ctx)
         try:
             return await deps.live_service.read(
                 capture_id,
@@ -49,11 +53,13 @@ def register_live_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
 
     @mcp.tool()
     async def peek_live_capture(
+        ctx: ToolContext,
         capture_id: str,
         cursor: Optional[int] = None,
         limit: int = 50,
     ) -> LiveCaptureReadResult:
         """Preview incremental traffic without advancing the live cursor."""
+        deps = get_tool_dependencies(ctx)
         try:
             return await deps.live_service.read(
                 capture_id,
@@ -66,10 +72,12 @@ def register_live_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
 
     @mcp.tool()
     async def stop_live_capture(
+        ctx: ToolContext,
         capture_id: str,
         persist: bool = True,
     ) -> StopLiveCaptureResult:
         """Stop an active live capture and optionally persist the filtered snapshot."""
+        deps = get_tool_dependencies(ctx)
         try:
             return await deps.live_service.stop(capture_id, persist=persist)
         except Exception as exc:
@@ -77,6 +85,7 @@ def register_live_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
 
     @mcp.tool()
     async def query_live_capture_entries(
+        ctx: ToolContext,
         capture_id: str,
         cursor: Optional[int] = None,
         preset: TrafficPreset = "api_focus",
@@ -104,6 +113,7 @@ def register_live_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
         scan_limit: int = 500,
     ) -> TrafficQueryResult:
         """Analyze the active live capture with summary-first filtering."""
+        deps = get_tool_dependencies(ctx)
         query = build_traffic_query(
             preset=preset,
             host_contains=host_contains,

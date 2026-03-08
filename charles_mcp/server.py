@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import logging
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
-from typing import Any, Optional
+from contextlib import asynccontextmanager
+from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -20,6 +20,7 @@ from charles_mcp.services import (
 )
 from charles_mcp.tools import (
     ToolDependencies,
+    attach_tool_dependencies,
     backup_config as _backup_config,
     register_history_tools,
     register_legacy_tools,
@@ -41,7 +42,7 @@ async def restore_config(config: Config) -> bool:
     return await _restore_config(config, client_factory=CharlesClient)
 
 
-def create_server(config: Optional[Config] = None) -> FastMCP:
+def create_server(config: Optional[Config] = None) -> FastMCP[ToolDependencies]:
     """
     Create and configure the Charles MCP server.
 
@@ -57,21 +58,6 @@ def create_server(config: Optional[Config] = None) -> FastMCP:
     for warning in warnings:
         logger.warning(warning)
 
-    @asynccontextmanager
-    async def lifespan(server: FastMCP) -> AsyncIterator[dict[str, Any]]:
-        logger.info("MCP service lifespan started")
-
-        if config.manage_charles_lifecycle:
-            backup_config(config)
-
-        try:
-            yield {"config": config}
-        finally:
-            if config.manage_charles_lifecycle:
-                await restore_config(config)
-            logger.info("MCP service lifespan finished")
-
-    mcp = FastMCP("CharlesMCP", json_response=True, lifespan=lifespan)
     live_service = LiveCaptureService(config, client_factory=CharlesClient)
     history_service = RecordingHistoryService(config, client_factory=CharlesClient)
     traffic_normalizer = TrafficNormalizer(config)
@@ -88,11 +74,29 @@ def create_server(config: Optional[Config] = None) -> FastMCP:
         live_service=live_service,
         history_service=history_service,
         traffic_query_service=traffic_query_service,
+        restore_config_fn=restore_config,
     )
 
-    register_live_tools(mcp, deps=deps)
-    register_history_tools(mcp, deps=deps)
-    register_legacy_tools(mcp, deps=deps)
-    register_reset_tools(mcp, deps=deps, restore_config_fn=restore_config)
+    @asynccontextmanager
+    async def lifespan(server: FastMCP[ToolDependencies]) -> AsyncIterator[ToolDependencies]:
+        logger.info("MCP service lifespan started")
+
+        if config.manage_charles_lifecycle:
+            backup_config(config)
+
+        try:
+            yield deps
+        finally:
+            if config.manage_charles_lifecycle:
+                await restore_config(config)
+            logger.info("MCP service lifespan finished")
+
+    mcp = FastMCP("CharlesMCP", json_response=True, lifespan=lifespan)
+    attach_tool_dependencies(mcp, deps)
+
+    register_live_tools(mcp)
+    register_history_tools(mcp)
+    register_legacy_tools(mcp)
+    register_reset_tools(mcp)
 
     return mcp
