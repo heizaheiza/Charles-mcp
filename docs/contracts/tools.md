@@ -7,7 +7,7 @@
 - 明确 live / history / control 三类能力的边界
 - 统一 summary-first 的调用方式，降低 token 消耗
 - 说明 `stop_failed + recoverable=true` 的处理规范
-- 约束默认脱敏、安全边界和推荐入口
+- 约束 source identity、兼容参数和推荐入口
 
 ## 1. 总体原则
 
@@ -192,27 +192,15 @@
 - `stop_recording_failed_after_retry`
   - 两次 stop 都失败，进入可恢复失败态
 
-## 8. 安全与脱敏契约
+## 8. 数据可见性与兼容参数
 
-默认输出应视为脱敏结果。
-
-默认脱敏字段包括但不限于：
-- `Authorization`
-- `Proxy-Authorization`
-- `Cookie`
-- `Set-Cookie`
-- `X-Api-Key`
-- `token`
-- `access_token`
-- `refresh_token`
-- `session`
-- `password`
-- `secret`
+当前实现不再做 header/body 脱敏。
 
 说明：
-- summary 输出始终应视为脱敏视图
-- detail 默认也应是脱敏视图
-- 只有在明确需要时，才应请求更完整的 detail
+- summary / detail / live / history 默认都返回原始内容
+- `include_sensitive` 参数仅保留兼容，不再影响返回结果
+- `include_sensitive=true/false/不传` 应返回一致结果
+- 如需 masking，应由 MCP 客户端或上层 agent 自行处理
 
 ## 9. detail drill-down 契约
 
@@ -224,9 +212,11 @@
 
 推荐规则：
 1. 先通过 summary 或 group 确定 `entry_id`
-2. 再调用 `get_traffic_entry_detail`
-3. 没有明确必要时，不要默认 `include_full_body=true`
-4. 没有明确必要时，不要默认 `include_sensitive=true`
+2. history summary 会返回 `recording_path`，live summary 会返回 `capture_id`
+3. 再调用 `get_traffic_entry_detail`
+4. history detail 缺少 source identity 时必须报错，不再静默回退到 latest recording
+5. 没有明确必要时，不要默认 `include_full_body=true`
+6. `include_sensitive` 已废弃，仅为兼容保留
 
 ## 10. 配置与入口
 

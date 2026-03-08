@@ -32,7 +32,10 @@ class TrafficQuery(BaseModel):
     response_json_query: str | None = None
     min_total_size: int | None = None
     max_total_size: int | None = None
-    include_sensitive: bool = False
+    include_sensitive: bool = Field(
+        default=False,
+        description="Deprecated compatibility field. No longer affects returned traffic.",
+    )
     include_body_preview: bool = True
     max_items: int = Field(default=20, ge=1, le=200)
     max_preview_chars: int = Field(default=256, ge=32, le=4096)

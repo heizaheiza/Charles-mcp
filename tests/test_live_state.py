@@ -77,3 +77,7 @@ def test_read_detects_session_reset() -> None:
     assert result.status == "reset_detected"
     assert "session_reset_detected" in result.warnings
     assert [item["path"] for item in result.items] == ["/replacement"]
+    assert result.next_cursor == 1
+    assert result.total_new_items == 1
+    assert [item["path"] for item in manager.active.items] == ["/replacement"]
+    assert manager.active.cursor == 1

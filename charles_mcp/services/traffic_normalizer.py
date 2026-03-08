@@ -8,7 +8,7 @@ from typing import Any
 
 from charles_mcp.analyzers import classify_entry, normalize_body, normalize_headers
 from charles_mcp.config import Config
-from charles_mcp.schemas.traffic import HttpMessage, TrafficEntry
+from charles_mcp.schemas.traffic import HttpMessage, ResourceClassification, TrafficEntry
 
 
 class TrafficNormalizer:
@@ -29,17 +29,18 @@ class TrafficNormalizer:
         max_preview_chars: int = 256,
         max_headers_per_side: int = 8,
         max_full_body_chars: int = 4096,
+        classification: ResourceClassification | None = None,
     ) -> TrafficEntry:
         """Normalize one Charles entry for summary and detail views."""
-        classification = classify_entry(raw_entry)
+        classification = classification or classify_entry(raw_entry)
         request = raw_entry.get("request") or {}
         response = raw_entry.get("response") or {}
 
-        request_headers, request_map, request_redactions = normalize_headers(
+        request_headers, request_map, _request_redactions = normalize_headers(
             (request.get("header") or {}).get("headers"),
             include_sensitive=include_sensitive,
         )
-        response_headers, response_map, response_redactions = normalize_headers(
+        response_headers, response_map, _response_redactions = normalize_headers(
             (response.get("header") or {}).get("headers"),
             include_sensitive=include_sensitive,
         )
@@ -71,8 +72,7 @@ class TrafficNormalizer:
             charset=request.get("charset"),
             content_encoding=request.get("contentEncoding"),
             body=request_body,
-            redactions_applied=[f"request.{value}" for value in request_redactions]
-            + request_body.redactions_applied,
+            redactions_applied=[],
         )
         response_message = HttpMessage(
             first_line=(response.get("header") or {}).get("firstLine"),
@@ -82,8 +82,7 @@ class TrafficNormalizer:
             charset=response.get("charset"),
             content_encoding=response.get("contentEncoding"),
             body=response_body,
-            redactions_applied=[f"response.{value}" for value in response_redactions]
-            + response_body.redactions_applied,
+            redactions_applied=[],
         )
 
         response_status = response.get("status")

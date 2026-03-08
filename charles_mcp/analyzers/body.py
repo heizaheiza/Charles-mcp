@@ -9,11 +9,6 @@ import re
 from typing import Any
 from urllib.parse import parse_qs
 
-from charles_mcp.analyzers.redaction import (
-    redact_form_mapping,
-    redact_json_like,
-    redact_text,
-)
 from charles_mcp.schemas.traffic import BodyContent
 
 _TEXTUAL_MIME_HINTS = (
@@ -37,7 +32,10 @@ def normalize_body(
     max_full_body_chars: int = 4096,
     prefix: str = "body",
 ) -> BodyContent:
-    """Normalize a Charles body into a structured content model."""
+    """Normalize a Charles body into a structured content model.
+
+    `include_sensitive` is kept for backward compatibility and ignored.
+    """
     message = message or {}
     body = message.get("body") or {}
     raw_text = body.get("text")
@@ -103,14 +101,8 @@ def normalize_body(
         result.kind = "json"
         try:
             parsed = json.loads(text)
-            redacted, applied = redact_json_like(
-                parsed,
-                prefix=prefix,
-                include_sensitive=include_sensitive,
-            )
-            result.parsed_json = redacted
-            result.redactions_applied.extend(applied)
-            rendered = json.dumps(redacted, ensure_ascii=False, separators=(",", ":"))
+            result.parsed_json = parsed
+            rendered = json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
             result.preview_text, result.preview_truncated = _clip_text(
                 rendered,
                 max_chars=max_preview_chars,
@@ -127,15 +119,9 @@ def normalize_body(
     if "application/x-www-form-urlencoded" in lower_mime:
         result.kind = "form"
         parsed_form = parse_qs(text, keep_blank_values=True)
-        redacted_form, applied = redact_form_mapping(
-            parsed_form,
-            prefix=prefix,
-            include_sensitive=include_sensitive,
-        )
-        result.parsed_form = redacted_form
-        result.redactions_applied.extend(applied)
+        result.parsed_form = parsed_form
         rendered = "&".join(
-            f"{key}={','.join(values)}" for key, values in sorted(redacted_form.items())
+            f"{key}={','.join(values)}" for key, values in sorted(parsed_form.items())
         )
         result.preview_text, result.preview_truncated = _clip_text(
             rendered,
@@ -158,31 +144,21 @@ def normalize_body(
         result.decode_warnings.extend(multipart_warnings)
         result.preview_text = f"[multipart/form-data with {len(summary)} part(s)]"
         if include_full_body:
-            redacted_text, applied = redact_text(
-                text,
-                include_sensitive=include_sensitive,
-            )
-            result.redactions_applied.extend(f"{prefix}.{value}" for value in applied)
             result.full_text, result.full_text_truncated = _clip_text(
-                redacted_text,
+                text,
                 max_chars=max_full_body_chars,
             )
         return result
 
     if _is_textual(mime_type) or _looks_like_text(text):
         result.kind = "text"
-        redacted_text, applied = redact_text(
-            text,
-            include_sensitive=include_sensitive,
-        )
-        result.redactions_applied.extend(f"{prefix}.{value}" for value in applied)
         result.preview_text, result.preview_truncated = _clip_text(
-            redacted_text,
+            text,
             max_chars=max_preview_chars,
         )
         if include_full_body:
             result.full_text, result.full_text_truncated = _clip_text(
-                redacted_text,
+                text,
                 max_chars=max_full_body_chars,
             )
         return result

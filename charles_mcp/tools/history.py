@@ -1,0 +1,242 @@
+from __future__ import annotations
+
+from typing import Optional
+
+from mcp.server.fastmcp import FastMCP
+
+from charles_mcp.schemas.analysis import (
+    CaptureAnalysisGroupsResult,
+    CaptureAnalysisStatsResult,
+    TrafficDetailResult,
+    TrafficGroupBy,
+    TrafficQueryResult,
+)
+from charles_mcp.schemas.history import (
+    RecordedTrafficQueryResult,
+    RecordingListResult,
+    RecordingSnapshotResult,
+)
+from charles_mcp.schemas.traffic_query import TrafficPreset
+from charles_mcp.tools.tool_contract import (
+    HostContains,
+    HttpMethodFilter,
+    KeywordRegex,
+    ToolDependencies,
+    build_tool_guidance_error,
+    build_traffic_query,
+    guidance_error_message,
+    normalize_http_method,
+    normalize_text_filter,
+)
+
+
+def register_history_tools(mcp: FastMCP, *, deps: ToolDependencies) -> None:
+    @mcp.tool()
+    async def analyze_recorded_traffic(
+        recording_path: Optional[str] = None,
+        preset: TrafficPreset = "api_focus",
+        host_contains: Optional[str] = None,
+        path_contains: Optional[str] = None,
+        method_in: Optional[list[str]] = None,
+        status_in: Optional[list[int]] = None,
+        resource_class_in: Optional[list[str]] = None,
+        min_priority_score: Optional[int] = None,
+        request_header_name: Optional[str] = None,
+        request_header_value_contains: Optional[str] = None,
+        response_header_name: Optional[str] = None,
+        response_header_value_contains: Optional[str] = None,
+        request_content_type: Optional[str] = None,
+        response_content_type: Optional[str] = None,
+        request_body_contains: Optional[str] = None,
+        response_body_contains: Optional[str] = None,
+        request_json_query: Optional[str] = None,
+        response_json_query: Optional[str] = None,
+        include_sensitive: bool = False,
+        include_body_preview: bool = True,
+        max_items: int = 20,
+        max_preview_chars: int = 256,
+        max_headers_per_side: int = 8,
+        scan_limit: int = 500,
+    ) -> TrafficQueryResult:
+        """Analyze a saved recording snapshot with compact summaries."""
+        query = build_traffic_query(
+            preset=preset,
+            host_contains=host_contains,
+            path_contains=path_contains,
+            method_in=method_in,
+            status_in=status_in,
+            resource_class_in=resource_class_in,
+            min_priority_score=min_priority_score,
+            request_header_name=request_header_name,
+            request_header_value_contains=request_header_value_contains,
+            response_header_name=response_header_name,
+            response_header_value_contains=response_header_value_contains,
+            request_content_type=request_content_type,
+            response_content_type=response_content_type,
+            request_body_contains=request_body_contains,
+            response_body_contains=response_body_contains,
+            request_json_query=request_json_query,
+            response_json_query=response_json_query,
+            include_sensitive=include_sensitive,
+            include_body_preview=include_body_preview,
+            max_items=max_items,
+            max_preview_chars=max_preview_chars,
+            max_headers_per_side=max_headers_per_side,
+            scan_limit=scan_limit,
+        )
+        return await deps.traffic_query_service.analyze_recorded_traffic(
+            recording_path=recording_path,
+            query=query,
+        )
+
+    @mcp.tool()
+    async def get_traffic_entry_detail(
+        source: str,
+        entry_id: str,
+        capture_id: Optional[str] = None,
+        recording_path: Optional[str] = None,
+        include_sensitive: bool = False,
+        include_full_body: bool = False,
+        max_body_chars: int = 4096,
+    ) -> TrafficDetailResult:
+        """Load one traffic entry detail view for drill-down inspection."""
+        return await deps.traffic_query_service.get_detail(
+            source=source,
+            entry_id=entry_id,
+            capture_id=capture_id,
+            recording_path=recording_path,
+            include_sensitive=include_sensitive,
+            include_full_body=include_full_body,
+            max_body_chars=max_body_chars,
+        )
+
+    @mcp.tool()
+    async def get_capture_analysis_stats(
+        source: str,
+        capture_id: Optional[str] = None,
+        recording_path: Optional[str] = None,
+        preset: TrafficPreset = "api_focus",
+        scan_limit: int = 500,
+    ) -> CaptureAnalysisStatsResult:
+        """Return coarse traffic class counts for a live capture or saved recording."""
+        return await deps.traffic_query_service.get_stats(
+            source=source,
+            capture_id=capture_id,
+            recording_path=recording_path,
+            preset=preset,
+            scan_limit=scan_limit,
+        )
+
+    @mcp.tool()
+    async def group_capture_analysis(
+        source: str,
+        group_by: TrafficGroupBy,
+        capture_id: Optional[str] = None,
+        recording_path: Optional[str] = None,
+        preset: TrafficPreset = "api_focus",
+        host_contains: Optional[str] = None,
+        path_contains: Optional[str] = None,
+        method_in: Optional[list[str]] = None,
+        status_in: Optional[list[int]] = None,
+        resource_class_in: Optional[list[str]] = None,
+        min_priority_score: Optional[int] = None,
+        request_header_name: Optional[str] = None,
+        request_header_value_contains: Optional[str] = None,
+        response_header_name: Optional[str] = None,
+        response_header_value_contains: Optional[str] = None,
+        request_content_type: Optional[str] = None,
+        response_content_type: Optional[str] = None,
+        request_body_contains: Optional[str] = None,
+        response_body_contains: Optional[str] = None,
+        request_json_query: Optional[str] = None,
+        response_json_query: Optional[str] = None,
+        include_sensitive: bool = False,
+        max_groups: int = 10,
+        max_preview_chars: int = 256,
+        max_headers_per_side: int = 8,
+        scan_limit: int = 500,
+    ) -> CaptureAnalysisGroupsResult:
+        """Group analyzed traffic so the agent can inspect hot spots with lower token cost."""
+        query = build_traffic_query(
+            preset=preset,
+            host_contains=host_contains,
+            path_contains=path_contains,
+            method_in=method_in,
+            status_in=status_in,
+            resource_class_in=resource_class_in,
+            min_priority_score=min_priority_score,
+            request_header_name=request_header_name,
+            request_header_value_contains=request_header_value_contains,
+            response_header_name=response_header_name,
+            response_header_value_contains=response_header_value_contains,
+            request_content_type=request_content_type,
+            response_content_type=response_content_type,
+            request_body_contains=request_body_contains,
+            response_body_contains=response_body_contains,
+            request_json_query=request_json_query,
+            response_json_query=response_json_query,
+            include_sensitive=include_sensitive,
+            include_body_preview=False,
+            max_items=max_groups,
+            max_preview_chars=max_preview_chars,
+            max_headers_per_side=max_headers_per_side,
+            scan_limit=scan_limit,
+        )
+        return await deps.traffic_query_service.group_capture(
+            source=source,
+            group_by=group_by,
+            capture_id=capture_id,
+            recording_path=recording_path,
+            query=query,
+            max_groups=max_groups,
+        )
+
+    @mcp.tool()
+    async def query_recorded_traffic(
+        host_contains: HostContains = None,
+        http_method: HttpMethodFilter = None,
+        keyword_regex: KeywordRegex = None,
+        keep_request: bool = True,
+        keep_response: bool = True,
+    ) -> RecordedTrafficQueryResult:
+        """Query the latest saved recording. This tool never reads the live Charles session."""
+        host_contains_normalized = normalize_text_filter(host_contains)
+        method_normalized, method_error = normalize_http_method(http_method)
+        if method_error:
+            raise ValueError(guidance_error_message(method_error))
+
+        if keyword_regex:
+            valid, error_msg = deps.history_service.validate_keyword_regex(keyword_regex)
+            if not valid:
+                raise ValueError(
+                    guidance_error_message(
+                        build_tool_guidance_error(
+                            parameter="keyword_regex",
+                            received=keyword_regex,
+                            reason=f"invalid regex: {error_msg}",
+                            valid_input="Provide a valid Python regular expression.",
+                            retry_example='query_recorded_traffic(keyword_regex="token|session")',
+                        )
+                    )
+                )
+
+        return await deps.history_service.query_latest_result(
+            host_contains=host_contains_normalized,
+            method_normalized=method_normalized,
+            keyword_regex=keyword_regex,
+            keep_request=keep_request,
+            keep_response=keep_response,
+        )
+
+    @mcp.tool()
+    async def list_recordings() -> RecordingListResult:
+        """List saved recording files using an explicit history-oriented tool name."""
+        return deps.history_service.list_recordings_result()
+
+    @mcp.tool()
+    async def get_recording_snapshot(path: Optional[str] = None) -> RecordingSnapshotResult:
+        """Load a saved recording snapshot. This tool never reads the live Charles session."""
+        try:
+            return await deps.history_service.get_snapshot_result(path)
+        except Exception as exc:
+            raise ValueError(str(exc)) from exc

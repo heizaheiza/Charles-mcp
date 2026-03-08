@@ -160,13 +160,39 @@ def test_traffic_normalizer_redacts_sensitive_headers_and_body_fields() -> None:
         max_headers_per_side=8,
     )
 
-    assert entry.request.header_map["authorization"] == ["[REDACTED]"]
-    assert entry.response.header_map["set-cookie"] == ["[REDACTED]"]
-    assert "secret-password" not in (entry.request.body.preview_text or "")
-    assert "top-secret" not in (entry.response.body.preview_text or "")
+    assert entry.request.header_map["authorization"] == ["Bearer secret-token"]
+    assert entry.response.header_map["set-cookie"] == ["sessionid=super-secret"]
+    assert "secret-password" in (entry.request.body.preview_text or "")
+    assert "top-secret" in (entry.response.body.preview_text or "")
     assert entry.request.body.kind == "json"
     assert entry.response.body.kind == "json"
-    assert "request.headers.authorization" in entry.request.body.redactions_applied or True
+    assert entry.request.body.redactions_applied == []
+    assert entry.response.body.redactions_applied == []
+
+
+def test_traffic_normalizer_ignores_include_sensitive_flag() -> None:
+    normalizer = TrafficNormalizer(Config())
+
+    default_entry = normalizer.normalize_entry(
+        _api_entry(),
+        capture_source="history",
+        recording_path="package/example.chlsj",
+        include_sensitive=False,
+        include_full_body=False,
+        max_preview_chars=80,
+        max_headers_per_side=8,
+    )
+    explicit_entry = normalizer.normalize_entry(
+        _api_entry(),
+        capture_source="history",
+        recording_path="package/example.chlsj",
+        include_sensitive=True,
+        include_full_body=False,
+        max_preview_chars=80,
+        max_headers_per_side=8,
+    )
+
+    assert default_entry.model_dump() == explicit_entry.model_dump()
 
 
 def test_traffic_normalizer_summarizes_multipart_parts() -> None:

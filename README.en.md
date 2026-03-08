@@ -9,7 +9,7 @@ Core capabilities:
 - Read incremental data from the current Charles session while recording is active
 - Keep live and history traffic analysis on separate paths
 - Prefer high-value API requests and filter out noisy assets such as images, fonts, media, and tunnels
-- Apply redaction by default so tokens, cookies, and authorization headers are not exposed by default
+- Return raw traffic content by default
 - Use summary-first outputs to reduce agent token usage and only expand details on demand
 
 ## Highlights
@@ -29,7 +29,9 @@ Core capabilities:
 
 3. Structured drill-down
 - `get_traffic_entry_detail`
-- Redacted detail by default
+- Raw detail by default
+- `include_sensitive` is retained only for compatibility and no longer changes output
+- History summaries include `recording_path` so detail can stay bound to the same snapshot
 - Full request or response bodies only when explicitly requested
 
 4. Safer stop semantics
@@ -420,7 +422,11 @@ Recommended rules:
 1. identify the target `entry_id` through summary or group results first
 2. call `get_traffic_entry_detail`
 3. do not default to `include_full_body=true`
-4. do not default to `include_sensitive=true`
+4. `include_sensitive` is deprecated and ignored
+
+History detail binding:
+- use the `recording_path` returned by summary items when available
+- history detail no longer falls back to the latest recording when source identity is missing
 
 ## Main tools
 
@@ -445,23 +451,15 @@ Recommended rules:
 - `throttling`
 - `reset_environment`
 
-## Security defaults
+## Data visibility and compatibility parameters
 
-Sensitive values are redacted by default. This includes, but is not limited to:
+This version no longer redacts traffic content:
 
-- `Authorization`
-- `Proxy-Authorization`
-- `Cookie`
-- `Set-Cookie`
-- `X-Api-Key`
-- `token`
-- `access_token`
-- `refresh_token`
-- `session`
-- `password`
-- `secret`
+- summary, detail, live, and history outputs all return raw values
+- `include_sensitive` remains in the tool surface only for backward compatibility
+- `include_sensitive=true`, `include_sensitive=false`, and omitting the flag should produce the same payload
 
-Summary output should always be treated as a redacted view.
+If you need masking, apply it in the MCP client or a higher-level agent workflow.
 
 ## Deprecated tools
 

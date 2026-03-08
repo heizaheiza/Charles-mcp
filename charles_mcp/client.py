@@ -393,10 +393,13 @@ class CharlesClient:
             raise ValueError("录制时长必须大于 0")
 
         logger.info(f"开始录制会话，时长: {duration}秒")
+        baseline_snapshot = await self.export_session_json()
 
         # 清理旧数据并开始录制
-        await self.clear_session()
-        await self.start_recording()
+        if not await self.clear_session():
+            raise CharlesClientError("failed to clear Charles session before recording")
+        if not await self.start_recording():
+            raise CharlesClientError("failed to start Charles recording")
 
         # 等待录制，定期报告进度
         interval = min(10, duration)
@@ -427,8 +430,13 @@ class CharlesClient:
                 pass
 
         # 停止录制并导出
-        await self.stop_recording()
+        if not await self.stop_recording():
+            raise CharlesClientError("failed to stop Charles recording")
         data = await self.export_session_json()
+        if not data:
+            raise CharlesClientError("recording export is empty")
+        if baseline_snapshot and data == baseline_snapshot:
+            raise CharlesClientError("recording export is unchanged from baseline")
 
         # 保存到文件
         if save_path:
@@ -439,6 +447,7 @@ class CharlesClient:
                 logger.info(f"会话已保存: {save_path}")
             except OSError as e:
                 logger.error(f"保存会话失败: {e}")
+                raise CharlesClientError(f"failed to persist recording snapshot: {e}") from e
 
         return data
 

@@ -1,8 +1,11 @@
 from copy import deepcopy
+import json
+from pathlib import Path
 
 import pytest
 
 import charles_mcp.server as server_module
+from charles_mcp.config import Config
 from charles_mcp.server import create_server
 
 
@@ -199,7 +202,8 @@ async def test_analyze_recorded_traffic_returns_summary_and_filters_static_asset
     assert result["filtered_out_by_class"]["static_asset"] == 1
     assert result["items"][0]["path"] == "/api/login"
     assert result["items"][0]["resource_class"] == "api_candidate"
-    assert result["items"][0]["request_header_highlights"]["authorization"] == "[REDACTED]"
+    assert result["items"][0]["request_header_highlights"]["authorization"] == "Bearer live-secret"
+    assert result["items"][0]["recording_path"]
 
 
 @pytest.mark.asyncio
@@ -254,22 +258,88 @@ async def test_get_traffic_entry_detail_returns_history_detail_view(
     assert detail["source"] == "history"
     assert detail["entry_id"] == entry_id
     assert detail["detail"]["entry"]["request"]["body"]["kind"] == "json"
-    assert detail["detail"]["entry"]["request"]["header_map"]["authorization"] == ["[REDACTED]"]
+    assert detail["detail"]["entry"]["request"]["header_map"]["authorization"] == ["Bearer live-secret"]
+    assert detail["detail"]["entry"]["response"]["body"]["preview_text"] == '{"ok":true,"access_token":"token-value"}'
+
+
+@pytest.mark.asyncio
+async def test_analyze_recorded_traffic_include_sensitive_flag_no_longer_changes_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_client = _fake_client_class()
+    fake_client.history_snapshot = [_api_entry()]
+    monkeypatch.setattr(server_module, "CharlesClient", fake_client)
+
+    server = create_server()
+    default_result = _tool_result(await server.call_tool("analyze_recorded_traffic", {}))
+    hidden_result = _tool_result(
+        await server.call_tool("analyze_recorded_traffic", {"include_sensitive": False})
+    )
+    explicit_result = _tool_result(
+        await server.call_tool("analyze_recorded_traffic", {"include_sensitive": True})
+    )
+
+    assert default_result["items"] == hidden_result["items"]
+    assert hidden_result["items"] == explicit_result["items"]
+
+
+@pytest.mark.asyncio
+async def test_query_live_capture_entries_returns_unredacted_summary_for_all_sensitive_modes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_client = _fake_client_class()
+    fake_client.current_export = [_api_entry("/api/bootstrap")]
+    monkeypatch.setattr(server_module, "CharlesClient", fake_client)
+
+    server = create_server()
+    started = _tool_result(
+        await server.call_tool(
+            "start_live_capture",
+            {"adopt_existing": True, "include_existing": False},
+        )
+    )
+
+    fake_client.current_export = [_api_entry("/api/bootstrap"), _api_entry("/api/profile")]
+
+    default_result = _tool_result(
+        await server.call_tool(
+            "query_live_capture_entries",
+            {"capture_id": started["capture_id"], "cursor": 0},
+        )
+    )
+    explicit_result = _tool_result(
+        await server.call_tool(
+            "query_live_capture_entries",
+            {
+                "capture_id": started["capture_id"],
+                "cursor": 0,
+                "include_sensitive": True,
+            },
+        )
+    )
+
+    assert default_result["items"][0]["request_header_highlights"]["authorization"] == "Bearer live-secret"
+    assert default_result["items"] == explicit_result["items"]
 
 
 @pytest.mark.asyncio
 async def test_analyze_recorded_traffic_supports_structured_filters_and_detail_full_body(
-    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
-    fake_client = _fake_client_class()
-    fake_client.history_snapshot = [_api_entry("/api/login"), _multipart_entry()]
-    monkeypatch.setattr(server_module, "CharlesClient", fake_client)
+    config = Config(base_dir=str(tmp_path))
+    recording_path = tmp_path / "package" / "manual.chlsj"
+    recording_path.parent.mkdir(parents=True, exist_ok=True)
+    recording_path.write_text(
+        json.dumps([_api_entry("/api/login"), _multipart_entry()]),
+        encoding="utf-8",
+    )
 
-    server = create_server()
+    server = create_server(config)
     summary = _tool_result(
         await server.call_tool(
             "analyze_recorded_traffic",
             {
+                "recording_path": str(recording_path),
                 "method_in": ["POST"],
                 "status_in": [201],
                 "request_content_type": "multipart/form-data",
@@ -293,6 +363,7 @@ async def test_analyze_recorded_traffic_supports_structured_filters_and_detail_f
     )
 
     request_body = detail["detail"]["entry"]["request"]["body"]
+    assert detail["detail"]["entry"]["recording_path"] == str(recording_path)
     assert request_body["kind"] == "multipart"
     assert len(request_body["multipart_summary"]) == 2
     assert request_body["multipart_summary"][1]["filename"] == "report.txt"

@@ -164,12 +164,11 @@ class TrafficAnalysisService:
         max_headers_per_side: int = 8,
         include_body_preview: bool = True,
     ) -> TrafficSummary:
-        redactions_applied = sorted(
-            set(entry.request.redactions_applied + entry.response.redactions_applied)
-        )
         return TrafficSummary(
             entry_id=entry.entry_id,
             capture_source=entry.capture_source,
+            capture_id=entry.capture_id,
+            recording_path=entry.recording_path,
             resource_class=entry.resource_class,
             priority_score=entry.priority_score,
             method=entry.method,
@@ -195,7 +194,7 @@ class TrafficAnalysisService:
             or entry.response.body.preview_truncated,
             matched_fields=match.matched_fields,
             match_reasons=match.match_reasons,
-            redactions_applied=redactions_applied,
+            redactions_applied=[],
             detail_available=True,
         )
 
@@ -205,7 +204,7 @@ class TrafficAnalysisService:
             raw_body_included=bool(
                 entry.request.body.full_text is not None or entry.response.body.full_text is not None
             ),
-            sensitive_included=include_sensitive,
+            sensitive_included=False,
             body_truncated=entry.request.body.full_text_truncated
             or entry.response.body.full_text_truncated
             or entry.request.body.preview_truncated

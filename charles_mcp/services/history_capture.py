@@ -184,6 +184,7 @@ class RecordingHistoryService:
         keep_response: bool = True,
     ) -> list[dict]:
         filtered_results: list[dict] = []
+        compiled_regex = re.compile(keyword_regex, re.IGNORECASE) if keyword_regex else None
 
         for entry in raw_data:
             if not isinstance(entry, dict):
@@ -199,21 +200,26 @@ class RecordingHistoryService:
                 continue
 
             match_info: Optional[dict] = None
-            if keyword_regex:
-                entry_str = json.dumps(entry, indent=2, ensure_ascii=False)
-                lines = entry_str.splitlines()
-                regex = re.compile(keyword_regex, re.IGNORECASE)
-
+            if compiled_regex:
                 try:
-                    for i, line in enumerate(lines):
-                        if regex.search(line):
-                            match_info = {"line": i + 1, "content": line.strip()}
-                            break
+                    entry_str = json.dumps(
+                        entry,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    )
+                    match = compiled_regex.search(entry_str)
                 except (TimeoutError, RecursionError):
                     return [{"error": "regex_match_timeout"}]
 
-                if not match_info:
+                if not match:
                     continue
+                snippet_start = max(match.start() - 40, 0)
+                snippet_end = min(match.end() + 40, len(entry_str))
+                match_info = {
+                    "line": 1,
+                    "content": entry_str[snippet_start:snippet_end],
+                }
 
             result = deepcopy(entry)
             if not keep_request:

@@ -117,6 +117,8 @@ class LiveCaptureManager:
 
         if status == "reset_detected":
             working_seen.clear()
+            working_items.clear()
+            base_cursor = 0
 
         for key, entry in prepared:
             if key in working_seen:
@@ -166,20 +168,35 @@ class LiveCaptureManager:
         return prepared
 
     def _fingerprint(self, entry: dict[str, Any]) -> str:
-        payload = json.dumps(
-            {
-                "host": entry.get("host"),
-                "method": entry.get("method"),
-                "path": entry.get("path"),
-                "query": entry.get("query"),
-                "status": entry.get("status"),
-                "times": entry.get("times"),
-                "request": entry.get("request"),
-                "response": entry.get("response"),
-                "totalSize": entry.get("totalSize"),
-            },
-            sort_keys=True,
-            ensure_ascii=False,
-            default=str,
-        )
+        payload = self._fingerprint_components(entry)
         return sha1(payload.encode("utf-8")).hexdigest()
+
+    def _fingerprint_components(self, entry: dict[str, Any]) -> str:
+        request = entry.get("request") or {}
+        response = entry.get("response") or {}
+        request_header = request.get("header") or {}
+        response_header = response.get("header") or {}
+        request_sizes = request.get("sizes") or {}
+        response_sizes = response.get("sizes") or {}
+        times = entry.get("times") or {}
+        durations = entry.get("durations") or {}
+
+        components = [
+            str(entry.get("host") or ""),
+            str(entry.get("method") or ""),
+            str(entry.get("path") or ""),
+            str(entry.get("query") or ""),
+            str(entry.get("status") or ""),
+            str(response.get("status") or ""),
+            str(times.get("start") or ""),
+            str(times.get("end") or ""),
+            str(durations.get("total") or ""),
+            str(entry.get("totalSize") or ""),
+            str(request.get("mimeType") or ""),
+            str(response.get("mimeType") or ""),
+            str(request_sizes.get("body") or ""),
+            str(response_sizes.get("body") or ""),
+            str(request_header.get("firstLine") or ""),
+            str(response_header.get("firstLine") or ""),
+        ]
+        return "|".join(components)

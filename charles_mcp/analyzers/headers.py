@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections import OrderedDict
 
-from charles_mcp.analyzers.redaction import redact_header_value
 from charles_mcp.schemas.traffic import HeaderKV
 
 _HIGHLIGHT_ORDER = (
@@ -26,10 +25,13 @@ def normalize_headers(
     *,
     include_sensitive: bool = False,
 ) -> tuple[list[HeaderKV], dict[str, list[str]], list[str]]:
-    """Normalize Charles header list into typed models and a lowercase map."""
+    """Normalize Charles header list into typed models and a lowercase map.
+
+    `include_sensitive` is kept for tool compatibility and no longer affects the
+    returned headers.
+    """
     headers: list[HeaderKV] = []
     header_map: dict[str, list[str]] = {}
-    redactions_applied: list[str] = []
 
     for raw in raw_headers or []:
         if not isinstance(raw, dict):
@@ -39,23 +41,17 @@ def normalize_headers(
             continue
         value = raw.get("value")
         value_str = None if value is None else str(value)
-        redacted_value, applied = redact_header_value(
-            name,
-            value_str,
-            include_sensitive=include_sensitive,
-        )
         lower_name = name.lower()
-        redactions_applied.extend(applied)
         header = HeaderKV(
             name=name,
-            value=redacted_value,
+            value=value_str,
             lower_name=lower_name,
-            redacted=bool(applied),
+            redacted=False,
         )
         headers.append(header)
-        header_map.setdefault(lower_name, []).append(redacted_value or "")
+        header_map.setdefault(lower_name, []).append(value_str or "")
 
-    return headers, header_map, redactions_applied
+    return headers, header_map, []
 
 
 def build_header_highlights(

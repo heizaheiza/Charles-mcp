@@ -1,42 +1,17 @@
-"""Redaction helpers for sensitive HTTP data."""
+"""Deprecated compatibility helpers for historical redaction APIs.
+
+The project no longer redacts traffic content. These helpers remain as no-op
+shims so existing imports and parameters continue to work without changing the
+returned payload.
+"""
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
-SENSITIVE_HEADER_NAMES = {
-    "authorization",
-    "proxy-authorization",
-    "cookie",
-    "set-cookie",
-    "x-api-key",
-    "x-auth-token",
-    "x-csrf-token",
-}
-
-SENSITIVE_BODY_KEYS = {
-    "token",
-    "access_token",
-    "refresh_token",
-    "session",
-    "sessionid",
-    "password",
-    "passwd",
-    "secret",
-    "api_key",
-    "client_secret",
-}
-
+SENSITIVE_HEADER_NAMES: set[str] = set()
+SENSITIVE_BODY_KEYS: set[str] = set()
 REDACTED = "[REDACTED]"
-
-_TEXT_PATTERNS = [
-    re.compile(r"\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]+", re.IGNORECASE),
-    re.compile(
-        r'(?i)\b(token|access_token|refresh_token|password|session|secret|api_key)\b'
-        r'(["\']?\s*[:=]\s*["\']?)([^"&,\s]+)'
-    ),
-]
 
 
 def redact_header_value(
@@ -45,11 +20,11 @@ def redact_header_value(
     *,
     include_sensitive: bool = False,
 ) -> tuple[str | None, list[str]]:
-    """Redact sensitive header values."""
-    lower_name = name.lower()
-    if include_sensitive or lower_name not in SENSITIVE_HEADER_NAMES:
-        return value, []
-    return REDACTED, [f"headers.{lower_name}"]
+    """Preserve header values.
+
+    `include_sensitive` is retained for backward compatibility and ignored.
+    """
+    return value, []
 
 
 def redact_json_like(
@@ -58,43 +33,10 @@ def redact_json_like(
     prefix: str = "body",
     include_sensitive: bool = False,
 ) -> tuple[Any, list[str]]:
-    """Recursively redact sensitive keys in JSON-like objects."""
-    if include_sensitive:
-        return value, []
+    """Preserve JSON-like values.
 
-    if isinstance(value, dict):
-        redacted: dict[str, Any] = {}
-        applied: list[str] = []
-        for key, item in value.items():
-            key_str = str(key)
-            path = f"{prefix}.{key_str}"
-            if key_str.lower() in SENSITIVE_BODY_KEYS:
-                redacted[key_str] = REDACTED
-                applied.append(path)
-                continue
-
-            nested, nested_applied = redact_json_like(
-                item,
-                prefix=path,
-                include_sensitive=include_sensitive,
-            )
-            redacted[key_str] = nested
-            applied.extend(nested_applied)
-        return redacted, applied
-
-    if isinstance(value, list):
-        redacted_list: list[Any] = []
-        applied: list[str] = []
-        for index, item in enumerate(value):
-            nested, nested_applied = redact_json_like(
-                item,
-                prefix=f"{prefix}[{index}]",
-                include_sensitive=include_sensitive,
-            )
-            redacted_list.append(nested)
-            applied.extend(nested_applied)
-        return redacted_list, applied
-
+    `include_sensitive` is retained for backward compatibility and ignored.
+    """
     return value, []
 
 
@@ -104,19 +46,11 @@ def redact_form_mapping(
     prefix: str = "body",
     include_sensitive: bool = False,
 ) -> tuple[dict[str, list[str]], list[str]]:
-    """Redact sensitive keys in form-urlencoded data."""
-    if include_sensitive:
-        return mapping, []
+    """Preserve form data.
 
-    redacted: dict[str, list[str]] = {}
-    applied: list[str] = []
-    for key, values in mapping.items():
-        if key.lower() in SENSITIVE_BODY_KEYS:
-            redacted[key] = [REDACTED for _ in values]
-            applied.append(f"{prefix}.{key}")
-        else:
-            redacted[key] = list(values)
-    return redacted, applied
+    `include_sensitive` is retained for backward compatibility and ignored.
+    """
+    return dict(mapping), []
 
 
 def redact_text(
@@ -124,20 +58,8 @@ def redact_text(
     *,
     include_sensitive: bool = False,
 ) -> tuple[str, list[str]]:
-    """Apply lightweight text redaction to previews."""
-    if include_sensitive or not value:
-        return value, []
+    """Preserve text previews.
 
-    redacted = value
-    applied: list[str] = []
-
-    if _TEXT_PATTERNS[0].search(redacted):
-        redacted = _TEXT_PATTERNS[0].sub(REDACTED, redacted)
-        applied.append("text.credentials")
-
-    def _replace(match: re.Match[str]) -> str:
-        applied.append(f"text.{match.group(1).lower()}")
-        return f"{match.group(1)}{match.group(2)}{REDACTED}"
-
-    redacted = _TEXT_PATTERNS[1].sub(_replace, redacted)
-    return redacted, applied
+    `include_sensitive` is retained for backward compatibility and ignored.
+    """
+    return value, []
