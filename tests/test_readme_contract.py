@@ -4,6 +4,8 @@
 def test_readme_documents_entrypoints_lifecycle_and_stop_recovery_contract() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
 
+    assert "快速开始" in readme
+    assert "工具总览" in readme
     assert "charles_mcp.main" in readme
     assert "CHARLES_MANAGE_LIFECYCLE" in readme
     assert "CHARLES_USER" in readme
@@ -22,3 +24,6 @@ def test_readme_documents_entrypoints_lifecycle_and_stop_recovery_contract() -> 
     assert "Antigravity" in readme
     assert "README.en.md" in readme
     assert "docs/contracts/tools.md" in readme
+    assert "proxy_by_time" not in readme
+    assert "filter_func" not in readme
+    assert "list_sessions" not in readme

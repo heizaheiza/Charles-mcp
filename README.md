@@ -1,86 +1,18 @@
-﻿# Charles MCP Server
+# Charles MCP Server
 
 [English README](README.en.md) | [Tool Contract](docs/contracts/tools.md)
 
-Charles MCP Server 用于把 Charles Proxy 接入 MCP 客户端，重点解决三个问题：
+Charles MCP Server 用于把 Charles Proxy 接入 MCP 客户端，让 agent 可以稳定地读取实时流量、分析历史录包，并在需要时再展开单条请求细节。
 
-- 在 Charles 正在录制时，agent 能持续读取当前 session 的实时增量数据
-- 对 live 与 history 两条链路做统一的结构化分析，而不是让 agent 直接消费原始抓包字典
-- 默认以低 token、可解释、原始数据的方式返回结果，适合 Claude CLI、Codex CLI、Antigravity 等 MCP 客户端稳定调用
+它解决的核心问题只有三个：
 
-## 工具亮点
+- 录制还在进行时，agent 也能持续读取当前 session 的增量流量
+- live 与 history 统一走结构化分析，不再让 agent 直接消费原始抓包字典
+- 默认使用 summary-first 输出，先看热点与摘要，再 drill-down 到单条 detail
 
-### 1. 真正可用的实时抓包链路
+## 快速开始
 
-传统做法常见的问题是：录制过程中只能读历史 `.chlsj`，或者必须等录制结束再导出。本项目把实时读取和历史查询拆开，避免语义混淆。
-
-实时工具：
-
-- `start_live_capture`：启动或接管当前 live capture
-- `read_live_capture`：按 cursor 读取当前 capture 的增量数据
-- `peek_live_capture`：不推进 cursor，只预览当前新增数据
-- `stop_live_capture`：更稳地收尾，内置一次短重试
-
-这意味着 agent 可以边录边看边分析，而不是只能做离线回放。
-
-### 2. 面向 agent 的低 token 分析输出
-
-项目默认不是把完整 request/response body 一股脑返回给 agent，而是采用 summary-first 模式。
-
-分析工具：
-
-- `query_live_capture_entries`
-- `analyze_recorded_traffic`
-- `group_capture_analysis`
-- `get_capture_analysis_stats`
-- `get_traffic_entry_detail`
-
-默认策略：
-
-- `preset="api_focus"`
-- 优先保留 JSON / API / GraphQL / Auth / 错误请求
-- 默认过滤 `static_asset`、`media`、`font`、`connect_tunnel` 等高噪音流量
-- 默认限制 `max_items`、`max_preview_chars`、`max_headers_per_side`
-- summary 结果带 `filtered_out_count` 和 `filtered_out_by_class`，便于 agent 理解被过滤了什么
-
-### 3. 结构化 drill-down，而不是原始字典拼接
-
-当 agent 需要深挖某条请求时，再调用 `get_traffic_entry_detail`。这样可以避免默认返回超大 payload，同时保留深入分析能力。
-
-detail 设计原则：
-
-- 默认返回原始内容
-- 默认不返回 full body
-- `include_sensitive` 参数仅保留兼容，不再影响返回结果
-- history summary 会附带 `recording_path`，便于 detail 稳定绑定到同一份录包
-- 只有显式请求时才返回更完整的 request/response 内容
-- 适合和 `group_capture_analysis -> query_live_capture_entries -> get_traffic_entry_detail` 组合使用
-
-### 4. 更稳的 stop 收尾语义
-
-`stop_live_capture` 不再是“失败就直接把状态打死”的工具。
-
-当前 stop 语义：
-
-- 内部会做一次短重试
-- 如果重试后成功，返回 `status="stopped"`
-- 如果两次 stop 都失败，返回 `status="stop_failed"`
-- 同时返回：
-  - `recoverable=true`
-  - `active_capture_preserved=true`
-
-这表示 active capture 仍保留，agent 可以继续读取、诊断，再次调用 stop，而不是直接丢掉上下文。
-
-## 前置条件
-
-### 1. Python 与 Charles
-
-- Python 3.10+
-- 本机已启动 Charles Proxy
-- Charles Web Interface 已启用
-- Charles 代理默认监听 `127.0.0.1:8888`
-
-### 2. 在 Charles 中开启 Web Interface
+### 1. 开启 Charles Web Interface
 
 在 Charles 中依次进入：`Proxy -> Web Interface Settings`
 
@@ -98,13 +30,13 @@ detail 设计原则：
 
 ![Charles Web Interface Settings](docs/images/charles-web-interface-settings.png)
 
-## 安装
+### 2. 安装
 
 ```bash
 pip install -e .[dev]
 ```
 
-安装后的命令入口：
+命令入口：
 
 ```bash
 charles-mcp
@@ -122,24 +54,9 @@ charles_mcp.main:main
 python charles-mcp-server.py
 ```
 
-## 环境变量
+### 3. 设置环境变量并启动
 
-| 变量 | 默认值 | 说明 |
-| --- | --- | --- |
-| `CHARLES_USER` | `admin` | Charles Web Interface 用户名 |
-| `CHARLES_PASS` | `123456` | Charles Web Interface 密码 |
-| `CHARLES_PROXY_HOST` | `127.0.0.1` | Charles 代理主机 |
-| `CHARLES_PROXY_PORT` | `8888` | Charles 代理端口 |
-| `CHARLES_CONFIG_PATH` | 自动探测 | Charles 配置文件路径 |
-| `CHARLES_REQUEST_TIMEOUT` | `10` | 控制面 HTTP 超时秒数 |
-| `CHARLES_MAX_STOPTIME` | `3600` | 有界录制最大时长 |
-| `CHARLES_MANAGE_LIFECYCLE` | `false` | 是否由 MCP server 管理 Charles 启停 |
-
-推荐默认值是 `CHARLES_MANAGE_LIFECYCLE=false`。除非你明确希望 MCP server 接管 Charles 生命周期，否则不要让它在退出时关闭你自己的 Charles 进程。
-
-## 各种终端中的配置方法
-
-### PowerShell
+#### PowerShell
 
 ```powershell
 $env:CHARLES_USER = "admin"
@@ -150,7 +67,7 @@ $env:CHARLES_MANAGE_LIFECYCLE = "false"
 charles-mcp
 ```
 
-### Windows CMD
+#### Windows CMD
 
 ```cmd
 set CHARLES_USER=admin
@@ -161,7 +78,7 @@ set CHARLES_MANAGE_LIFECYCLE=false
 charles-mcp
 ```
 
-### Git Bash / Bash / Zsh
+#### Git Bash / Bash / Zsh
 
 ```bash
 export CHARLES_USER=admin
@@ -172,17 +89,15 @@ export CHARLES_MANAGE_LIFECYCLE=false
 charles-mcp
 ```
 
-### 直接使用 Python 入口
+#### 直接使用 Python 入口
 
 ```bash
 python -c "from charles_mcp.main import main; main()"
 ```
 
-## MCP 客户端配置示例
+### 4. 配置到 MCP 客户端
 
-### 通用 stdio MCP 配置
-
-适用于支持 `command + args + env` 的 MCP 客户端。
+通用 stdio MCP 配置：
 
 ```json
 {
@@ -199,9 +114,7 @@ python -c "from charles_mcp.main import main; main()"
 }
 ```
 
-### Claude CLI
-
-使用 `claude mcp add-json` 添加 stdio MCP server：
+#### Claude CLI
 
 ```bash
 claude mcp add-json charles '{
@@ -215,30 +128,7 @@ claude mcp add-json charles '{
 }'
 ```
 
-仓库本地开发配置：
-
-```bash
-claude mcp add-json charles '{
-  "type": "stdio",
-  "command": "python",
-  "args": ["~/Charles-mcp/charles-mcp-server.py"],
-  "env": {
-    "CHARLES_USER": "admin",
-    "CHARLES_PASS": "123456",
-    "CHARLES_MANAGE_LIFECYCLE": "false"
-  }
-}'
-```
-
-检查当前配置：
-
-```bash
-claude mcp get charles
-```
-
-### Codex CLI
-
-Codex CLI 从 `~/.codex/config.toml` 读取 MCP server 配置。推荐写法：
+#### Codex CLI
 
 ```toml
 [mcp_servers.charles]
@@ -250,22 +140,7 @@ CHARLES_PASS = "123456"
 CHARLES_MANAGE_LIFECYCLE = "false"
 ```
 
-仓库本地开发写法：
-
-```toml
-[mcp_servers.charles]
-command = "python"
-args = ["~/Charles-mcp/charles-mcp-server.py"]
-
-[mcp_servers.charles.env]
-CHARLES_USER = "admin"
-CHARLES_PASS = "123456"
-CHARLES_MANAGE_LIFECYCLE = "false"
-```
-
-### Antigravity
-
-Antigravity 支持在 `Manage MCP Servers` 或 `View raw config` 中直接编辑 `mcpServers` JSON：
+#### Antigravity
 
 ```json
 {
@@ -282,30 +157,31 @@ Antigravity 支持在 `Manage MCP Servers` 或 `View raw config` 中直接编辑
 }
 ```
 
-仓库本地开发写法：
+## 前置条件
 
-```json
-{
-  "mcpServers": {
-    "charles": {
-      "command": "python",
-      "args": ["~/Charles-mcp/charles-mcp-server.py"],
-      "cwd": "~/Charles-mcp",
-      "env": {
-        "CHARLES_USER": "admin",
-        "CHARLES_PASS": "123456",
-        "CHARLES_MANAGE_LIFECYCLE": "false"
-      }
-    }
-  }
-}
-```
+- Python 3.10+
+- 本机已启动 Charles Proxy
+- Charles Web Interface 已启用
+- Charles 代理默认监听 `127.0.0.1:8888`
 
-## 推荐调用路径
+推荐默认保持 `CHARLES_MANAGE_LIFECYCLE=false`。除非你明确希望 MCP server 接管 Charles 生命周期，否则不要让它在退出时关闭你的 Charles 进程。
 
-### 实时分析路径
+## 环境变量
 
-推荐给 agent 的调用顺序：
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `CHARLES_USER` | `admin` | Charles Web Interface 用户名 |
+| `CHARLES_PASS` | `123456` | Charles Web Interface 密码 |
+| `CHARLES_PROXY_HOST` | `127.0.0.1` | Charles 代理主机 |
+| `CHARLES_PROXY_PORT` | `8888` | Charles 代理端口 |
+| `CHARLES_CONFIG_PATH` | 自动探测 | Charles 配置文件路径 |
+| `CHARLES_REQUEST_TIMEOUT` | `10` | 控制面 HTTP 超时秒数 |
+| `CHARLES_MAX_STOPTIME` | `3600` | 有界录制最大时长 |
+| `CHARLES_MANAGE_LIFECYCLE` | `false` | 是否由 MCP server 管理 Charles 启停 |
+
+## 推荐使用路径
+
+### 实时分析
 
 1. `start_live_capture`
 2. `group_capture_analysis`
@@ -313,36 +189,93 @@ Antigravity 支持在 `Manage MCP Servers` 或 `View raw config` 中直接编辑
 4. `get_traffic_entry_detail`
 5. `stop_live_capture`
 
-原因：
+这条路径的目标是先用最少 token 找到热点，再按需展开单条请求。
 
-- `group_capture_analysis` 最省 token，适合先看热点 host/path/status
-- `query_live_capture_entries` 返回结构化 summary，适合持续筛选关键请求
-- `get_traffic_entry_detail` 只在确认目标条目后再展开完整细节
-
-### 历史分析路径
+### 历史分析
 
 1. `list_recordings`
 2. `analyze_recorded_traffic`
 3. `group_capture_analysis(source="history")`
 4. `get_traffic_entry_detail`
 
-## Agent 对 `stop_failed + recoverable=true` 的处理规范
+这条路径适合先浏览录包，再对结构化 summary 做筛选和 drill-down。
+
+## 工具总览
+
+README 只覆盖推荐使用的主流程工具。兼容保留入口不在本文档中展开。
+
+### Live capture tools
+
+| 工具 | 作用 | 何时使用 |
+| --- | --- | --- |
+| `start_live_capture` | 启动或接管当前 live capture，并返回 `capture_id` | 开始实时观察前 |
+| `read_live_capture` | 按 cursor 增量读取 live capture | 连续消费新增流量时 |
+| `peek_live_capture` | 预览新增流量但不推进 cursor | 想先看一眼而不改变读取进度时 |
+| `stop_live_capture` | 结束 capture，并在需要时持久化快照 | 收尾或导出本次实时抓包时 |
+| `query_live_capture_entries` | 对 live capture 输出结构化 summary | 想从实时流量里筛关键请求时 |
+
+### Analysis tools
+
+| 工具 | 作用 | 何时使用 |
+| --- | --- | --- |
+| `group_capture_analysis` | 对 live 或 history 结果聚合分组 | 先看热点 host、path、status 时 |
+| `get_capture_analysis_stats` | 返回分类统计结果 | 想快速知道 API、静态资源、错误流量占比时 |
+| `get_traffic_entry_detail` | 读取单条 entry 的 detail | 已经拿到目标 `entry_id`，准备 drill-down 时 |
+| `analyze_recorded_traffic` | 对指定录包或最新录包输出结构化 summary | 想分析历史 `.chlsj` 时 |
+
+### History tools
+
+| 工具 | 作用 | 何时使用 |
+| --- | --- | --- |
+| `list_recordings` | 列出当前已保存的录包文件 | 想先知道有哪些历史录包时 |
+| `get_recording_snapshot` | 读取某个录包的原始快照 | 需要完整查看某个保存快照时 |
+| `query_recorded_traffic` | 直接对最新录包做轻量过滤 | 需要快速查找 host、method、regex 命中时 |
+
+### Status and control tools
+
+| 工具 | 作用 | 何时使用 |
+| --- | --- | --- |
+| `charles_status` | 查看 Charles 连接状态与当前 live capture 状态 | 怀疑连接异常或想确认 capture 是否仍在活动时 |
+| `throttling` | 设置 Charles 弱网预设 | 需要模拟 3G / 4G / 5G / off 等网络条件时 |
+| `reset_environment` | 恢复 Charles 配置并清理当前环境 | 需要回到干净环境时 |
+
+## 关键使用约定
+
+### 1. 默认返回原始数据
+
+当前版本不再做 header/body 脱敏：
+
+- summary / detail / live / history 默认都返回原始内容
+- `include_sensitive` 参数仅保留兼容，不再影响返回结果
+
+### 2. 先 summary，再 detail
+
+推荐先用 `group_capture_analysis`、`query_live_capture_entries` 或 `analyze_recorded_traffic` 确认目标，再调用 `get_traffic_entry_detail`。
+
+默认不要一开始就请求 `include_full_body=true`。
+
+### 3. history detail 需要稳定 source identity
+
+history summary 会返回 `recording_path`，live summary 会返回 `capture_id`。
+
+对 `get_traffic_entry_detail`：
+
+- history 场景优先传 `recording_path`
+- live 场景优先传 `capture_id`
+
+### 4. `stop_live_capture` 的失败是可恢复的
 
 `stop_live_capture` 有两个稳定结束态：
 
-1. `status="stopped"`
-- stop 成功
-- active capture 已关闭
-- 当 `persist=true` 时可能返回 `persisted_path`
+- `status="stopped"`：真正关闭完成
+- `status="stop_failed"`：短重试后仍失败，但 capture 仍保留
 
-2. `status="stop_failed"`
-- 一次短重试后仍失败
-- 这不代表 live capture 已关闭
-- 需要和以下字段一起解释：
-  - `recoverable=true`
-  - `active_capture_preserved=true`
+当返回 `stop_failed` 时，应同时关注：
 
-当工具返回：
+- `recoverable`
+- `active_capture_preserved`
+
+如果结果是：
 
 ```json
 {
@@ -352,154 +285,7 @@ Antigravity 支持在 `Manage MCP Servers` 或 `View raw config` 中直接编辑
 }
 ```
 
-agent 应该：
-
-1. 保留 `capture_id`
-2. 不要假设 Charles 已经停止录制
-3. 检查 `error` 和 `warnings`
-4. 如有必要，调用 `charles_status` 确认当前状态
-5. 如果还要继续观察流量，继续调用 `read_live_capture`
-6. 如果要继续收尾，再次调用 `stop_live_capture`
-7. 只有 `status="stopped"` 才表示真正关闭完成
-
-相关 warning：
-
-- `stop_recording_retry_succeeded`
-- `stop_recording_failed_after_retry`
-
-## summary-first 契约
-
-默认契约是：不要一上来就拉大体积 detail。先看 group 或 summary，再决定是否 drill-down。
-
-### `query_live_capture_entries`
-
-适用：
-- 对当前 live capture 做结构化分析
-
-返回重点：
-- `items`
-- `matched_count`
-- `filtered_out_count`
-- `filtered_out_by_class`
-- `next_cursor`
-- `warnings`
-
-### `analyze_recorded_traffic`
-
-适用：
-- 对历史 `.chlsj` 记录做结构化分析
-
-返回重点：
-- `items`
-- `matched_count`
-- `filtered_out_count`
-- `filtered_out_by_class`
-- `warnings`
-
-### `group_capture_analysis`
-
-适用：
-- 在查看单条 summary 之前，先用最低 token 成本识别热点
-
-支持分组字段：
-- `host`
-- `path`
-- `response_status`
-- `resource_class`
-- `method`
-- `host_path`
-- `host_status`
-
-返回重点：
-- `groups`
-- `matched_count`
-- `filtered_out_count`
-- `filtered_out_by_class`
-- `warnings`
-
-## token 优化约束
-
-分析类工具默认会过滤高噪音流量。默认契约的目标是让 agent 更稳定，而不是返回全量原始 dump。
-
-默认过滤或降权：
-- `control.charles`
-- `CONNECT`
-- `static_asset`
-- `media`
-- `font`
-- 其他低价值高噪音请求
-
-推荐默认：
-- 保持 `preset="api_focus"`
-- 控制较小的 `max_items`
-- 没有明确必要时，不要请求 `include_full_body=true`
-- 先使用 `group_capture_analysis`
-- 再使用 `query_live_capture_entries`
-
-如果结果被裁剪，agent 应结合这些字段理解当前输出：
-- `truncated`
-- `filtered_out_count`
-- `filtered_out_by_class`
-
-## detail drill-down 契约
-
-### `get_traffic_entry_detail`
-
-推荐用途：
-- 对单条 entry 做精细分析
-- 不作为批量分析的第一步
-
-推荐规则：
-1. 先通过 summary 或 group 确定 `entry_id`
-2. 再调用 `get_traffic_entry_detail`
-3. 没有明确必要时，不要默认 `include_full_body=true`
-4. `include_sensitive` 已废弃，仅为兼容保留，不再影响返回结果
-
-history detail 绑定规则：
-
-- summary 项会返回 `recording_path`
-- 对 history detail，优先传回 summary 中的 `recording_path`
-- server 不再在缺少 source identity 时静默回退到 latest recording
-
-## 主要工具
-
-### Live tools
-- `start_live_capture`
-- `read_live_capture`
-- `peek_live_capture`
-- `stop_live_capture`
-- `query_live_capture_entries`
-- `get_capture_analysis_stats`
-- `group_capture_analysis`
-
-### History tools
-- `analyze_recorded_traffic`
-- `query_recorded_traffic`
-- `list_recordings`
-- `get_recording_snapshot`
-- `get_traffic_entry_detail`
-
-### Status / control tools
-- `charles_status`
-- `throttling`
-- `reset_environment`
-
-## 数据可见性与兼容参数
-
-当前版本不再做 header/body 脱敏：
-
-- summary / detail / live / history 默认都返回原始数据
-- `include_sensitive` 参数仅为兼容旧调用方而保留
-- `include_sensitive=true/false/不传` 三种情况下结果应保持一致
-
-如果调用方需要限制敏感信息暴露，需要在 MCP 客户端或上层 agent 中自行处理。
-
-## 已废弃但保留兼容的工具
-
-以下工具仍然存在，但不应继续作为新的主流程入口：
-
-- `proxy_by_time`
-- `filter_func`
+说明当前 capture 仍然可继续读取、诊断、再次 stop，而不是已经被关闭。
 
 ## 开发
 
@@ -516,20 +302,7 @@ python charles-mcp-server.py
 python -c "from charles_mcp.main import main; main()"
 ```
 
-## 感谢支持
+## 另见
 
-如果这个项目对你有帮助，欢迎请我喝杯咖啡，支持后续的维护与迭代。
-
-### 微信赞赏码
-
-![微信赞赏码](docs/images/wechat-donate.png)
-
-### USDT-TRC20
-
-`TCudxn9ByCxPZHXLtvqBjFmLWXywBoicRs`
-
-感谢你的支持与认可。
-
-另见：
-- [README.en.md](README.en.md)
-- [docs/contracts/tools.md](docs/contracts/tools.md)
+- [English README](README.en.md)
+- [Tool Contract](docs/contracts/tools.md)
