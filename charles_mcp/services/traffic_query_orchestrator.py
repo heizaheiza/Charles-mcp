@@ -162,7 +162,6 @@ class TrafficQueryOrchestrator:
         entry_id: str,
         capture_id: str | None = None,
         recording_path: str | None = None,
-        include_sensitive: bool = False,
         include_full_body: bool = False,
         max_body_chars: int = 4096,
     ) -> TrafficDetailResult:
@@ -203,7 +202,7 @@ class TrafficQueryOrchestrator:
         if entry is None:
             raise ValueError(f"traffic entry `{entry_id}` was not found in `{identity}`")
 
-        detail = self.analysis_service.build_detail(entry, include_sensitive=include_sensitive)
+        detail = self.analysis_service.build_detail(entry)
         return TrafficDetailResult(
             source=source,
             entry_id=entry_id,
@@ -269,7 +268,6 @@ class TrafficQueryOrchestrator:
                 capture_source=source,
                 capture_id=capture_id,
                 recording_path=recording_path,
-                include_sensitive=False,
                 include_full_body=True,
                 max_preview_chars=min(max_body_chars, 1024),
                 max_headers_per_side=32,
@@ -335,6 +333,11 @@ class TrafficQueryOrchestrator:
         if truncated:
             warnings.append("scan_limit_reached")
 
+        # errors_only preset: inject has_error filter so only error traffic matches
+        effective_query = query
+        if query.preset == "errors_only" and query.has_error is None:
+            effective_query = query.model_copy(update={"has_error": True})
+
         filtered_out_by_class: Counter[str] = Counter()
         classified_counts: Counter[str] = Counter()
         matched_entries: list[tuple[TrafficEntry, TrafficMatch]] = []
@@ -346,7 +349,7 @@ class TrafficQueryOrchestrator:
             classification = classify_entry(raw)
             classified_counts[classification.resource_class] += 1
 
-            if self._excluded_by_preset(classification.resource_class, query):
+            if self._excluded_by_preset(classification.resource_class, effective_query):
                 filtered_out_by_class[classification.resource_class] += 1
                 continue
 
@@ -355,14 +358,13 @@ class TrafficQueryOrchestrator:
                 capture_source=source,
                 capture_id=capture_id,
                 recording_path=recording_path,
-                include_sensitive=False,
                 include_full_body=False,
-                max_preview_chars=query.max_preview_chars,
-                max_headers_per_side=query.max_headers_per_side,
+                max_preview_chars=effective_query.max_preview_chars,
+                max_headers_per_side=effective_query.max_headers_per_side,
                 classification=classification,
             )
             detail_entries[entry.entry_id] = entry
-            match = self.analysis_service.match_entry(entry, query)
+            match = self.analysis_service.match_entry(entry, effective_query)
             if match.matched:
                 matched_entries.append((entry, match))
 
@@ -400,10 +402,7 @@ class TrafficQueryOrchestrator:
     def _excluded_by_preset(resource_class: str, query: TrafficQuery) -> bool:
         if query.preset == "all_http":
             return resource_class == "control"
-        if query.preset == "errors_only":
-            return resource_class in {"control", "static_asset", "font", "media", "connect_tunnel"}
-        if query.preset == "page_bootstrap":
-            return resource_class in {"control", "static_asset", "font", "media", "connect_tunnel"}
+        # api_focus, errors_only, page_bootstrap all exclude the same noise classes
         return resource_class in {"control", "static_asset", "font", "media", "connect_tunnel"}
 
     @staticmethod

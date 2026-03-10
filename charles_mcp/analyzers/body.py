@@ -26,16 +26,12 @@ def normalize_body(
     message: dict | None,
     header_map: dict[str, list[str]],
     *,
-    include_sensitive: bool = False,
     include_full_body: bool = False,
     max_preview_chars: int = 256,
     max_full_body_chars: int = 4096,
     prefix: str = "body",
 ) -> BodyContent:
-    """Normalize a Charles body into a structured content model.
-
-    `include_sensitive` is kept for backward compatibility and ignored.
-    """
+    """Normalize a Charles body into a structured content model."""
     message = message or {}
     body = message.get("body") or {}
     raw_text = body.get("text")

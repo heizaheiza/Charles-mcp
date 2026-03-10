@@ -147,14 +147,13 @@ def test_resource_classifier_prioritizes_api_and_filters_image_assets() -> None:
     assert image.resource_class == "static_asset"
 
 
-def test_traffic_normalizer_redacts_sensitive_headers_and_body_fields() -> None:
+def test_traffic_normalizer_returns_full_sensitive_headers_and_body() -> None:
     normalizer = TrafficNormalizer(Config())
 
     entry = normalizer.normalize_entry(
         _api_entry(),
         capture_source="history",
         recording_path="package/example.chlsj",
-        include_sensitive=False,
         include_full_body=False,
         max_preview_chars=80,
         max_headers_per_side=8,
@@ -166,33 +165,29 @@ def test_traffic_normalizer_redacts_sensitive_headers_and_body_fields() -> None:
     assert "top-secret" in (entry.response.body.preview_text or "")
     assert entry.request.body.kind == "json"
     assert entry.response.body.kind == "json"
-    assert entry.request.body.model_dump()["redactions_applied"] == []
-    assert entry.response.body.model_dump()["redactions_applied"] == []
 
 
-def test_traffic_normalizer_ignores_include_sensitive_flag() -> None:
+def test_traffic_normalizer_produces_consistent_output() -> None:
     normalizer = TrafficNormalizer(Config())
 
-    default_entry = normalizer.normalize_entry(
+    entry_a = normalizer.normalize_entry(
         _api_entry(),
         capture_source="history",
         recording_path="package/example.chlsj",
-        include_sensitive=False,
         include_full_body=False,
         max_preview_chars=80,
         max_headers_per_side=8,
     )
-    explicit_entry = normalizer.normalize_entry(
+    entry_b = normalizer.normalize_entry(
         _api_entry(),
         capture_source="history",
         recording_path="package/example.chlsj",
-        include_sensitive=True,
         include_full_body=False,
         max_preview_chars=80,
         max_headers_per_side=8,
     )
 
-    assert default_entry.model_dump() == explicit_entry.model_dump()
+    assert entry_a.model_dump() == entry_b.model_dump()
 
 
 def test_traffic_normalizer_summarizes_multipart_parts() -> None:
@@ -202,7 +197,6 @@ def test_traffic_normalizer_summarizes_multipart_parts() -> None:
         _multipart_entry(),
         capture_source="history",
         recording_path="package/upload.chlsj",
-        include_sensitive=False,
         include_full_body=True,
         max_preview_chars=120,
         max_headers_per_side=8,
@@ -229,7 +223,6 @@ def test_traffic_normalizer_decodes_encoded_multipart_parts() -> None:
         raw_entry,
         capture_source="history",
         recording_path="package/upload-encoded.chlsj",
-        include_sensitive=False,
         include_full_body=False,
         max_preview_chars=120,
         max_headers_per_side=8,
@@ -248,7 +241,6 @@ def test_traffic_normalizer_uses_header_boundary_when_mimetype_is_generic() -> N
         raw_entry,
         capture_source="history",
         recording_path="package/upload-header-boundary.chlsj",
-        include_sensitive=False,
         include_full_body=False,
         max_preview_chars=120,
         max_headers_per_side=8,

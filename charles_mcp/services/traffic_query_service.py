@@ -82,7 +82,6 @@ class TrafficQueryService:
         entry_id: str,
         capture_id: str | None = None,
         recording_path: str | None = None,
-        include_sensitive: bool = False,
         include_full_body: bool = False,
         max_body_chars: int = 4096,
     ) -> TrafficDetailResult:
@@ -91,7 +90,6 @@ class TrafficQueryService:
             entry_id=entry_id,
             capture_id=capture_id,
             recording_path=recording_path,
-            include_sensitive=include_sensitive,
             include_full_body=include_full_body,
             max_body_chars=max_body_chars,
         )

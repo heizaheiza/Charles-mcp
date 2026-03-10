@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from hashlib import sha1
 from typing import Any
 
@@ -24,7 +23,6 @@ class TrafficNormalizer:
         capture_source: str,
         capture_id: str | None = None,
         recording_path: str | None = None,
-        include_sensitive: bool = False,
         include_full_body: bool = False,
         max_preview_chars: int = 256,
         max_headers_per_side: int = 8,
@@ -36,19 +34,16 @@ class TrafficNormalizer:
         request = raw_entry.get("request") or {}
         response = raw_entry.get("response") or {}
 
-        request_headers, request_map, _request_redactions = normalize_headers(
+        request_headers, request_map = normalize_headers(
             (request.get("header") or {}).get("headers"),
-            include_sensitive=include_sensitive,
         )
-        response_headers, response_map, _response_redactions = normalize_headers(
+        response_headers, response_map = normalize_headers(
             (response.get("header") or {}).get("headers"),
-            include_sensitive=include_sensitive,
         )
 
         request_body = normalize_body(
             request,
             request_map,
-            include_sensitive=include_sensitive,
             include_full_body=include_full_body,
             max_preview_chars=max_preview_chars,
             max_full_body_chars=max_full_body_chars,
@@ -57,7 +52,6 @@ class TrafficNormalizer:
         response_body = normalize_body(
             response,
             response_map,
-            include_sensitive=include_sensitive,
             include_full_body=include_full_body,
             max_preview_chars=max_preview_chars,
             max_full_body_chars=max_full_body_chars,
@@ -72,7 +66,6 @@ class TrafficNormalizer:
             charset=request.get("charset"),
             content_encoding=request.get("contentEncoding"),
             body=request_body,
-            redactions_applied=[],
         )
         response_message = HttpMessage(
             first_line=(response.get("header") or {}).get("firstLine"),
@@ -82,7 +75,6 @@ class TrafficNormalizer:
             charset=response.get("charset"),
             content_encoding=response.get("contentEncoding"),
             body=response_body,
-            redactions_applied=[],
         )
 
         response_status = response.get("status")
@@ -123,23 +115,22 @@ class TrafficNormalizer:
         capture_id: str | None,
         recording_path: str | None,
     ) -> str:
-        payload = json.dumps(
-            {
-                "capture_source": capture_source,
-                "capture_id": capture_id,
-                "recording_path": recording_path,
-                "host": raw_entry.get("host"),
-                "method": raw_entry.get("method"),
-                "path": raw_entry.get("path"),
-                "query": raw_entry.get("query"),
-                "times": raw_entry.get("times"),
-                "request": raw_entry.get("request"),
-                "response": raw_entry.get("response"),
-                "status": raw_entry.get("status"),
-                "totalSize": raw_entry.get("totalSize"),
-            },
-            sort_keys=True,
-            ensure_ascii=False,
-            default=str,
-        )
-        return sha1(payload.encode("utf-8")).hexdigest()
+        """Build a lightweight fingerprint from key routing fields."""
+        times = raw_entry.get("times") or {}
+        response = raw_entry.get("response") or {}
+        components = [
+            capture_source,
+            capture_id or "",
+            recording_path or "",
+            str(raw_entry.get("host") or ""),
+            str(raw_entry.get("method") or ""),
+            str(raw_entry.get("path") or ""),
+            str(raw_entry.get("query") or ""),
+            str(raw_entry.get("status") or ""),
+            str(response.get("status") or ""),
+            str(times.get("start") or ""),
+            str(times.get("end") or ""),
+            str(raw_entry.get("totalSize") or ""),
+        ]
+        return sha1("|".join(components).encode("utf-8")).hexdigest()
+

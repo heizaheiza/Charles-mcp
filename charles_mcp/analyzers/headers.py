@@ -22,14 +22,8 @@ _HIGHLIGHT_ORDER = (
 
 def normalize_headers(
     raw_headers: list[dict] | None,
-    *,
-    include_sensitive: bool = False,
-) -> tuple[list[HeaderKV], dict[str, list[str]], list[str]]:
-    """Normalize Charles header list into typed models and a lowercase map.
-
-    `include_sensitive` is kept for tool compatibility and no longer affects the
-    returned headers.
-    """
+) -> tuple[list[HeaderKV], dict[str, list[str]]]:
+    """Normalize Charles header list into typed models and a lowercase map."""
     headers: list[HeaderKV] = []
     header_map: dict[str, list[str]] = {}
 
@@ -46,12 +40,11 @@ def normalize_headers(
             name=name,
             value=value_str,
             lower_name=lower_name,
-            redacted=False,
         )
         headers.append(header)
         header_map.setdefault(lower_name, []).append(value_str or "")
 
-    return headers, header_map, []
+    return headers, header_map
 
 
 def build_header_highlights(

@@ -21,6 +21,12 @@ def _failing_client_class() -> type:
         async def __aexit__(self, exc_type, exc, tb):
             return None
 
+        async def connect(self):
+            pass
+
+        async def close(self):
+            pass
+
         def get_full_save_path(self) -> str:
             return "package/legacy-failure.chlsj"
 

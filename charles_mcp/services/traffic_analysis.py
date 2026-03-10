@@ -194,17 +194,15 @@ class TrafficAnalysisService:
             or entry.response.body.preview_truncated,
             matched_fields=match.matched_fields,
             match_reasons=match.match_reasons,
-            redactions_applied=[],
             detail_available=True,
         )
 
-    def build_detail(self, entry: TrafficEntry, *, include_sensitive: bool) -> TrafficDetail:
+    def build_detail(self, entry: TrafficEntry) -> TrafficDetail:
         return TrafficDetail(
             entry=entry,
             raw_body_included=bool(
                 entry.request.body.full_text is not None or entry.response.body.full_text is not None
             ),
-            sensitive_included=False,
             body_truncated=entry.request.body.full_text_truncated
             or entry.response.body.full_text_truncated
             or entry.request.body.preview_truncated

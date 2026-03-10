@@ -43,6 +43,12 @@ def _fake_client_class() -> type:
         async def __aexit__(self, exc_type, exc, tb):
             return None
 
+        async def connect(self):
+            pass
+
+        async def close(self):
+            pass
+
         async def export_session_json(self) -> list[dict]:
             type(self).calls.append("export")
             return deepcopy(type(self).current_export)

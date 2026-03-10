@@ -155,6 +155,12 @@ def _fake_client_class() -> type:
         async def __aexit__(self, exc_type, exc, tb):
             return None
 
+        async def connect(self):
+            pass
+
+        async def close(self):
+            pass
+
         async def export_session_json(self) -> list[dict]:
             type(self).calls.append("export")
             return deepcopy(type(self).current_export)
@@ -263,7 +269,7 @@ async def test_get_traffic_entry_detail_returns_history_detail_view(
 
 
 @pytest.mark.asyncio
-async def test_analyze_recorded_traffic_include_sensitive_flag_no_longer_changes_output(
+async def test_analyze_recorded_traffic_returns_consistent_output(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     fake_client = _fake_client_class()
@@ -271,20 +277,14 @@ async def test_analyze_recorded_traffic_include_sensitive_flag_no_longer_changes
     monkeypatch.setattr(server_module, "CharlesClient", fake_client)
 
     server = create_server()
-    default_result = _tool_result(await server.call_tool("analyze_recorded_traffic", {}))
-    hidden_result = _tool_result(
-        await server.call_tool("analyze_recorded_traffic", {"include_sensitive": False})
-    )
-    explicit_result = _tool_result(
-        await server.call_tool("analyze_recorded_traffic", {"include_sensitive": True})
-    )
+    result_a = _tool_result(await server.call_tool("analyze_recorded_traffic", {}))
+    result_b = _tool_result(await server.call_tool("analyze_recorded_traffic", {}))
 
-    assert default_result["items"] == hidden_result["items"]
-    assert hidden_result["items"] == explicit_result["items"]
+    assert result_a["items"] == result_b["items"]
 
 
 @pytest.mark.asyncio
-async def test_query_live_capture_entries_returns_unredacted_summary_for_all_sensitive_modes(
+async def test_query_live_capture_entries_returns_full_summary(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     fake_client = _fake_client_class()
@@ -301,25 +301,14 @@ async def test_query_live_capture_entries_returns_unredacted_summary_for_all_sen
 
     fake_client.current_export = [_api_entry("/api/bootstrap"), _api_entry("/api/profile")]
 
-    default_result = _tool_result(
+    result = _tool_result(
         await server.call_tool(
             "query_live_capture_entries",
             {"capture_id": started["capture_id"], "cursor": 0},
         )
     )
-    explicit_result = _tool_result(
-        await server.call_tool(
-            "query_live_capture_entries",
-            {
-                "capture_id": started["capture_id"],
-                "cursor": 0,
-                "include_sensitive": True,
-            },
-        )
-    )
 
-    assert default_result["items"][0]["request_header_highlights"]["authorization"] == "Bearer live-secret"
-    assert default_result["items"] == explicit_result["items"]
+    assert result["items"][0]["request_header_highlights"]["authorization"] == "Bearer live-secret"
 
 
 @pytest.mark.asyncio

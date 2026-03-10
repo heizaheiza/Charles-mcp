@@ -31,11 +31,6 @@ class HeaderKV(BaseModel):
     name: str
     value: str | None
     lower_name: str
-    redacted: bool = Field(
-        default=False,
-        description="Deprecated compatibility field. Traffic is no longer redacted.",
-        deprecated=True,
-    )
 
 
 class BodyContent(BaseModel):
@@ -52,11 +47,6 @@ class BodyContent(BaseModel):
     parsed_form: dict[str, list[str]] | None = None
     multipart_summary: list[dict[str, Any]] = Field(default_factory=list)
     decode_warnings: list[str] = Field(default_factory=list)
-    redactions_applied: list[str] = Field(
-        default_factory=list,
-        description="Deprecated compatibility field. Always empty.",
-        deprecated=True,
-    )
 
 
 class HttpMessage(BaseModel):
@@ -67,11 +57,6 @@ class HttpMessage(BaseModel):
     charset: str | None = None
     content_encoding: str | None = None
     body: BodyContent = Field(default_factory=BodyContent)
-    redactions_applied: list[str] = Field(
-        default_factory=list,
-        description="Deprecated compatibility field. Always empty.",
-        deprecated=True,
-    )
 
 
 class TrafficEntry(BaseModel):
@@ -127,21 +112,11 @@ class TrafficSummary(BaseModel):
     preview_truncated: bool = False
     matched_fields: list[str] = Field(default_factory=list)
     match_reasons: list[str] = Field(default_factory=list)
-    redactions_applied: list[str] = Field(
-        default_factory=list,
-        description="Deprecated compatibility field. Always empty.",
-        deprecated=True,
-    )
     detail_available: bool = True
 
 
 class TrafficDetail(BaseModel):
     entry: TrafficEntry
     raw_body_included: bool = False
-    sensitive_included: bool = Field(
-        default=False,
-        description="Deprecated compatibility field. Traffic is always returned in full.",
-        deprecated=True,
-    )
     body_truncated: bool = False
     warnings: list[str] = Field(default_factory=list)

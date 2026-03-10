@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 from typing import Optional
 
@@ -16,6 +17,8 @@ from charles_mcp.schemas.live_capture import (
     StopLiveCaptureResult,
 )
 from charles_mcp.utils import ensure_directory
+
+logger = logging.getLogger(__name__)
 
 STOP_RETRY_DELAY_SECONDS = 0.25
 
@@ -33,6 +36,24 @@ class LiveCaptureService:
         self.config = config
         self.client_factory = client_factory
         self.live_manager = live_manager or LiveCaptureManager()
+        self._shared_client: Optional[CharlesClient] = None
+
+    async def _get_shared_client(self) -> CharlesClient:
+        """Return the reusable client, creating it on first access."""
+        if self._shared_client is None:
+            self._shared_client = self.client_factory(self.config)
+            await self._shared_client.connect()
+        return self._shared_client
+
+    async def _close_shared_client(self) -> None:
+        """Close the shared client if it exists."""
+        if self._shared_client is not None:
+            try:
+                await self._shared_client.close()
+            except Exception as exc:
+                logger.debug("Error closing shared client: %s", exc)
+            finally:
+                self._shared_client = None
 
     async def start(
         self,
@@ -44,16 +65,16 @@ class LiveCaptureService:
         managed = not adopt_existing
         baseline_items: list[dict] = []
 
-        async with self.client_factory(self.config) as client:
-            if adopt_existing:
+        client = await self._get_shared_client()
+        if adopt_existing:
+            baseline_items = await client.export_session_json()
+        else:
+            if not reset_session:
                 baseline_items = await client.export_session_json()
-            else:
-                if not reset_session:
-                    baseline_items = await client.export_session_json()
-                if reset_session and not await client.clear_session():
-                    raise CharlesClientError("failed to clear current Charles session")
-                if not await client.start_recording():
-                    raise CharlesClientError("failed to start Charles recording")
+            if reset_session and not await client.clear_session():
+                raise CharlesClientError("failed to clear current Charles session")
+            if not await client.start_recording():
+                raise CharlesClientError("failed to start Charles recording")
 
         capture = self.live_manager.start(
             managed=managed,
@@ -118,13 +139,14 @@ class LiveCaptureService:
 
         persisted_path: str | None = None
         if persist:
-            async with self.client_factory(self.config) as client:
-                persisted_path = self.save_capture_items(
-                    client.get_full_save_path(),
-                    capture.items,
-                )
+            client = await self._get_shared_client()
+            persisted_path = self.save_capture_items(
+                client.get_full_save_path(),
+                capture.items,
+            )
 
         stopped = self.live_manager.close(capture_id)
+        await self._close_shared_client()
         return StopLiveCaptureResult(
             capture_id=stopped.capture_id,
             status="stopped",
@@ -137,7 +159,13 @@ class LiveCaptureService:
         )
 
     async def export_current_session(self) -> list[dict]:
-        async with self.client_factory(self.config) as client:
+        try:
+            client = await self._get_shared_client()
+            return await client.export_session_json()
+        except CharlesClientError:
+            # Shared client may have gone stale; reset and retry once
+            await self._close_shared_client()
+            client = await self._get_shared_client()
             return await client.export_session_json()
 
     def save_capture_items(self, path: str, data: list[dict]) -> str:
@@ -166,8 +194,8 @@ class LiveCaptureService:
 
         for attempt in range(2):
             try:
-                async with self.client_factory(self.config) as client:
-                    success = await client.stop_recording()
+                client = await self._get_shared_client()
+                success = await client.stop_recording()
             except CharlesClientError as error:
                 success = False
                 last_error = str(error)
@@ -183,3 +211,4 @@ class LiveCaptureService:
 
         warnings.append("stop_recording_failed_after_retry")
         return False, warnings, last_error or "failed to stop Charles recording"
+
