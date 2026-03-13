@@ -30,96 +30,17 @@ Settings dialog:
 
 ![Charles Web Interface Settings](docs/images/charles-web-interface-settings.png)
 
-### 2. Install
+### 2. Install and configure your MCP client
 
-```bash
-pip install -e .[dev]
-```
+No cloning, no manual virtualenv. Requires [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-Installed command:
-
-```bash
-charles-mcp
-```
-
-Package entrypoint:
-
-```text
-charles_mcp.main:main
-```
-
-Repository-local compatibility entrypoint:
-
-```bash
-python charles-mcp-server.py
-```
-
-### 3. Set environment variables and start the server
-
-#### PowerShell
-
-```powershell
-$env:CHARLES_USER = "admin"
-$env:CHARLES_PASS = "123456"
-$env:CHARLES_PROXY_HOST = "127.0.0.1"
-$env:CHARLES_PROXY_PORT = "8888"
-$env:CHARLES_MANAGE_LIFECYCLE = "false"
-charles-mcp
-```
-
-#### Windows CMD
-
-```cmd
-set CHARLES_USER=admin
-set CHARLES_PASS=123456
-set CHARLES_PROXY_HOST=127.0.0.1
-set CHARLES_PROXY_PORT=8888
-set CHARLES_MANAGE_LIFECYCLE=false
-charles-mcp
-```
-
-#### Git Bash / Bash / Zsh
-
-```bash
-export CHARLES_USER=admin
-export CHARLES_PASS=123456
-export CHARLES_PROXY_HOST=127.0.0.1
-export CHARLES_PROXY_PORT=8888
-export CHARLES_MANAGE_LIFECYCLE=false
-charles-mcp
-```
-
-#### Direct Python entrypoint
-
-```bash
-python -c "from charles_mcp.main import main; main()"
-```
-
-### 4. Register it in your MCP client
-
-Generic stdio MCP configuration:
-
-```json
-{
-  "mcpServers": {
-    "charles": {
-      "command": "charles-mcp",
-      "env": {
-        "CHARLES_USER": "admin",
-        "CHARLES_PASS": "123456",
-        "CHARLES_MANAGE_LIFECYCLE": "false"
-      }
-    }
-  }
-}
-```
-
-#### Claude CLI
+#### Claude Code CLI
 
 ```bash
 claude mcp add-json charles '{
   "type": "stdio",
-  "command": "charles-mcp",
+  "command": "uvx",
+  "args": ["charles-mcp"],
   "env": {
     "CHARLES_USER": "admin",
     "CHARLES_PASS": "123456",
@@ -128,25 +49,14 @@ claude mcp add-json charles '{
 }'
 ```
 
-#### Codex CLI
-
-```toml
-[mcp_servers.charles]
-command = "charles-mcp"
-
-[mcp_servers.charles.env]
-CHARLES_USER = "admin"
-CHARLES_PASS = "123456"
-CHARLES_MANAGE_LIFECYCLE = "false"
-```
-
-#### Antigravity
+#### Claude Desktop / Cursor / generic JSON config
 
 ```json
 {
   "mcpServers": {
     "charles": {
-      "command": "charles-mcp",
+      "command": "uvx",
+      "args": ["charles-mcp"],
       "env": {
         "CHARLES_USER": "admin",
         "CHARLES_PASS": "123456",
@@ -156,6 +66,90 @@ CHARLES_MANAGE_LIFECYCLE = "false"
   }
 }
 ```
+
+#### Codex CLI
+
+```toml
+[mcp_servers.charles]
+command = "uvx"
+args = ["charles-mcp"]
+
+[mcp_servers.charles.env]
+CHARLES_USER = "admin"
+CHARLES_PASS = "123456"
+CHARLES_MANAGE_LIFECYCLE = "false"
+```
+
+### Auto-install via AI agent
+
+Copy-paste the following prompt into any AI agent (Claude Code, ChatGPT, Gemini CLI, Cursor Agent, etc.) and it will install and configure charles-mcp automatically:
+
+<details>
+<summary>Click to expand auto-install prompt</summary>
+
+```text
+Install the "charles-mcp" MCP server and configure it for my MCP client. Follow these steps exactly:
+
+Step 1 — Detect OS:
+  Determine if this machine runs Windows, macOS, or Linux.
+
+Step 2 — Ensure uv is installed:
+  Run: uv --version
+  If the command fails (uv not found):
+    - macOS/Linux: run: curl -LsSf https://astral.sh/uv/install.sh | sh
+    - Windows: run: powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+  After installing, verify uv works: uv --version
+
+Step 3 — Detect which MCP client is installed:
+  Check in this order and use the FIRST match:
+
+  a) Claude Code — run: claude --version
+     If it succeeds, run this command and skip to Step 5:
+       claude mcp add-json charles '{"type":"stdio","command":"uvx","args":["charles-mcp"],"env":{"CHARLES_USER":"admin","CHARLES_PASS":"123456","CHARLES_MANAGE_LIFECYCLE":"false"}}'
+
+  b) Claude Desktop — check if config file exists:
+     - macOS:   ~/Library/Application Support/Claude/claude_desktop_config.json
+     - Windows: %APPDATA%\Claude\claude_desktop_config.json
+     - Linux:   ~/.config/Claude/claude_desktop_config.json
+
+  c) Cursor — check if any of these exist:
+     - ~/.cursor/mcp.json
+     - .cursor/mcp.json (in current project)
+
+  d) Windsurf — check if exists:
+     - ~/.codeium/windsurf/mcp_config.json
+
+  If none detected, ask the user which client they use.
+
+Step 4 — Write config (for clients b/c/d):
+  The config entry to add is:
+    "charles": {
+      "command": "uvx",
+      "args": ["charles-mcp"],
+      "env": {
+        "CHARLES_USER": "admin",
+        "CHARLES_PASS": "123456",
+        "CHARLES_MANAGE_LIFECYCLE": "false"
+      }
+    }
+
+  IMPORTANT: If the config file already exists, read it first, parse the JSON,
+  add the "charles" key inside "mcpServers" (create "mcpServers" if absent),
+  and write back. Do NOT overwrite other existing MCP server entries.
+  If the file does not exist, create it with:
+    { "mcpServers": { "charles": { ... } } }
+
+Step 5 — Verify:
+  Run: uvx charles-mcp
+  Wait 3 seconds then terminate the process.
+  If it starts without import errors, the installation is successful.
+
+Step 6 — Report:
+  Print: "charles-mcp installed successfully. Please restart your MCP client to load the new server."
+  Also mention that Charles Proxy must be running with Web Interface enabled (Proxy → Web Interface Settings, username: admin, password: 123456).
+```
+
+</details>
 
 ## Requirements
 

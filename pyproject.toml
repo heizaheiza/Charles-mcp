@@ -7,7 +7,7 @@ name = "charles-mcp"
 version = "2.0.0"
 description = "Charles Proxy MCP server with live capture, structured traffic analysis, and agent-friendly tool contracts"
 readme = {file = "README.en.md", content-type = "text/markdown"}
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "7owe2"}
 ]
@@ -16,7 +16,6 @@ keywords = ["mcp", "charles", "proxy", "traffic-analysis", "network-debugging", 
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
