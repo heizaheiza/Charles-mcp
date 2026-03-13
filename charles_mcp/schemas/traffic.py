@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 CaptureSource = Literal["live", "history"]
 ResourceClass = Literal[
@@ -29,8 +29,15 @@ class ResourceClassification(BaseModel):
 
 class HeaderKV(BaseModel):
     name: str
-    value: str | None
-    lower_name: str
+    value: str | None = None
+    lower_name: str = Field(default="", exclude=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _compute_lower_name(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "name" in data:
+            data.setdefault("lower_name", str(data["name"]).lower())
+        return data
 
 
 class BodyContent(BaseModel):
@@ -43,8 +50,8 @@ class BodyContent(BaseModel):
     preview_truncated: bool = False
     full_text: str | None = None
     full_text_truncated: bool = False
-    parsed_json: dict[str, Any] | list[Any] | None = None
-    parsed_form: dict[str, list[str]] | None = None
+    parsed_json: dict[str, Any] | list[Any] | None = Field(default=None, exclude=True)
+    parsed_form: dict[str, list[str]] | None = Field(default=None, exclude=True)
     multipart_summary: list[dict[str, Any]] = Field(default_factory=list)
     decode_warnings: list[str] = Field(default_factory=list)
 
@@ -52,7 +59,7 @@ class BodyContent(BaseModel):
 class HttpMessage(BaseModel):
     first_line: str | None = None
     headers: list[HeaderKV] = Field(default_factory=list)
-    header_map: dict[str, list[str]] = Field(default_factory=dict)
+    header_map: dict[str, list[str]] = Field(default_factory=dict, exclude=True)
     mime_type: str | None = None
     charset: str | None = None
     content_encoding: str | None = None

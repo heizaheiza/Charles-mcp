@@ -45,7 +45,7 @@ class TrafficQueryOrchestrator:
             query=query,
             capture_id=capture_id,
             cursor=cursor,
-            advance=True,
+            advance=False,
             read_limit=limit,
         )
         return self.build_query_result(prepared=prepared, query=query, include_items=True)
@@ -92,7 +92,7 @@ class TrafficQueryOrchestrator:
                 raise ValueError("capture_id is required for live analysis")
             live_result = await self.live_service.read(
                 capture_id,
-                cursor=cursor if advance else 0,
+                cursor=cursor if cursor is not None else 0,
                 limit=read_limit or query.scan_limit,
                 advance=advance,
             )
@@ -203,11 +203,18 @@ class TrafficQueryOrchestrator:
             raise ValueError(f"traffic entry `{entry_id}` was not found in `{identity}`")
 
         detail = self.analysis_service.build_detail(entry)
+        warnings: list[str] = []
+        estimated_chars = len(detail.model_dump_json(exclude_none=True))
+        if estimated_chars > 12_000:
+            warnings.append(
+                f"large_response:{estimated_chars}_chars. "
+                "Consider using a smaller max_body_chars or include_full_body=false."
+            )
         return TrafficDetailResult(
             source=source,
             entry_id=entry_id,
             detail=detail,
-            warnings=[],
+            warnings=warnings,
         )
 
     async def cache_summary_scope(self, *, source: str, identity: str) -> None:
@@ -270,7 +277,7 @@ class TrafficQueryOrchestrator:
                 recording_path=recording_path,
                 include_full_body=True,
                 max_preview_chars=min(max_body_chars, 1024),
-                max_headers_per_side=32,
+                max_headers_per_side=16,
                 max_full_body_chars=max_body_chars,
                 classification=classification,
             )

@@ -1,10 +1,10 @@
-﻿"""Schemas for traffic analysis tool outputs."""
+"""Schemas for traffic analysis tool outputs."""
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 
 from charles_mcp.schemas.traffic import CaptureSource, ResourceClass, TrafficDetail, TrafficSummary
 
@@ -19,6 +19,15 @@ TrafficGroupBy = Literal[
 ]
 
 
+def _strip_none(data: Any) -> Any:
+    """Recursively remove None values from serialized output."""
+    if isinstance(data, dict):
+        return {k: _strip_none(v) for k, v in data.items() if v is not None}
+    if isinstance(data, list):
+        return [_strip_none(item) for item in data]
+    return data
+
+
 class TrafficQueryResult(BaseModel):
     source: CaptureSource
     items: list[TrafficSummary] = Field(default_factory=list)
@@ -31,12 +40,20 @@ class TrafficQueryResult(BaseModel):
     truncated: bool = False
     warnings: list[str] = Field(default_factory=list)
 
+    @model_serializer(mode="wrap")
+    def _compact(self, handler: Any) -> Any:
+        return _strip_none(handler(self))
+
 
 class TrafficDetailResult(BaseModel):
     source: CaptureSource
     entry_id: str
     detail: TrafficDetail
     warnings: list[str] = Field(default_factory=list)
+
+    @model_serializer(mode="wrap")
+    def _compact(self, handler: Any) -> Any:
+        return _strip_none(handler(self))
 
 
 class CaptureAnalysisStatsResult(BaseModel):

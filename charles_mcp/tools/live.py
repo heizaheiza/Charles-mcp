@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -13,6 +13,48 @@ from charles_mcp.schemas.live_capture import (
 from charles_mcp.schemas.traffic_query import TrafficPreset
 from charles_mcp.tools.tool_contract import ToolContext, build_traffic_query, get_tool_dependencies
 
+_ENTRY_SUMMARY_KEYS = (
+    "method", "scheme", "host", "path", "query", "status",
+    "totalSize", "errorMessage",
+)
+_MAX_BODY_PREVIEW_CHARS = 256
+
+
+def _summarize_raw_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    """Compact a raw Charles entry to routing fields only, preventing context explosion."""
+    summary: dict[str, Any] = {}
+    for key in _ENTRY_SUMMARY_KEYS:
+        value = entry.get(key)
+        if value is not None:
+            summary[key] = value
+
+    response = entry.get("response")
+    if isinstance(response, dict):
+        resp_status = response.get("status")
+        if resp_status is not None:
+            summary["response_status"] = resp_status
+        resp_mime = response.get("mimeType")
+        if resp_mime:
+            summary["response_content_type"] = resp_mime
+
+    request = entry.get("request")
+    if isinstance(request, dict):
+        req_mime = request.get("mimeType")
+        if req_mime:
+            summary["request_content_type"] = req_mime
+
+    times = entry.get("times")
+    if isinstance(times, dict) and times.get("start"):
+        summary["start_time"] = times["start"]
+
+    return summary
+
+
+def _compact_read_result(result: LiveCaptureReadResult) -> LiveCaptureReadResult:
+    """Replace raw items with compact summaries to avoid token explosion."""
+    compacted = [_summarize_raw_entry(item) for item in result.items if isinstance(item, dict)]
+    return result.model_copy(update={"items": compacted})
+
 
 def register_live_tools(mcp: FastMCP) -> None:
     @mcp.tool()
@@ -22,7 +64,9 @@ def register_live_tools(mcp: FastMCP) -> None:
         include_existing: bool = False,
         adopt_existing: bool = False,
     ) -> LiveCaptureStartResult:
-        """Start or adopt a live capture session for incremental polling."""
+        """Start or adopt a live capture session for incremental polling.
+        Returns a capture_id required by all other live tools.
+        Use adopt_existing=true to take over an ongoing Charles session without clearing it."""
         deps = get_tool_dependencies(ctx)
         try:
             return await deps.live_service.start(
@@ -40,14 +84,18 @@ def register_live_tools(mcp: FastMCP) -> None:
         cursor: Optional[int] = None,
         limit: int = 50,
     ) -> LiveCaptureReadResult:
-        """Read incremental traffic from the current Charles session without history fallback."""
+        """Read incremental traffic and advance the cursor.
+        Returns compact entry summaries (host/method/path/status only).
+        Use query_live_capture_entries for structured filtering instead of this tool.
+        This tool advances the internal cursor — repeated calls only return new items."""
         deps = get_tool_dependencies(ctx)
         try:
-            return await deps.live_service.read(
+            result = await deps.live_service.read(
                 capture_id,
                 cursor=cursor,
                 limit=limit,
             )
+            return _compact_read_result(result)
         except Exception as exc:
             raise ValueError(str(exc)) from exc
 
@@ -58,15 +106,19 @@ def register_live_tools(mcp: FastMCP) -> None:
         cursor: Optional[int] = None,
         limit: int = 50,
     ) -> LiveCaptureReadResult:
-        """Preview incremental traffic without advancing the live cursor."""
+        """Preview incremental traffic without advancing the cursor.
+        Returns compact entry summaries (host/method/path/status only).
+        Safe to call repeatedly — does not consume items.
+        Use query_live_capture_entries for structured filtering and analysis."""
         deps = get_tool_dependencies(ctx)
         try:
-            return await deps.live_service.read(
+            result = await deps.live_service.read(
                 capture_id,
                 cursor=cursor,
                 limit=limit,
                 advance=False,
             )
+            return _compact_read_result(result)
         except Exception as exc:
             raise ValueError(str(exc)) from exc
 
@@ -76,7 +128,8 @@ def register_live_tools(mcp: FastMCP) -> None:
         capture_id: str,
         persist: bool = True,
     ) -> StopLiveCaptureResult:
-        """Stop an active live capture and optionally persist the filtered snapshot."""
+        """Stop an active live capture and optionally persist the filtered snapshot.
+        Only status='stopped' means the capture is fully closed."""
         deps = get_tool_dependencies(ctx)
         try:
             return await deps.live_service.stop(capture_id, persist=persist)
@@ -106,12 +159,16 @@ def register_live_tools(mcp: FastMCP) -> None:
         request_json_query: Optional[str] = None,
         response_json_query: Optional[str] = None,
         include_body_preview: bool = True,
-        max_items: int = 20,
-        max_preview_chars: int = 256,
-        max_headers_per_side: int = 8,
+        max_items: int = 10,
+        max_preview_chars: int = 128,
+        max_headers_per_side: int = 6,
         scan_limit: int = 500,
     ) -> TrafficQueryResult:
-        """Analyze the active live capture with summary-first filtering."""
+        """Analyze the active live capture with structured summary-first filtering.
+        This is the RECOMMENDED tool for inspecting live traffic.
+        Does NOT advance the cursor — safe to call repeatedly with different filters.
+        Default cursor=0 scans all captured data from the beginning.
+        Use get_traffic_entry_detail to drill down into a specific entry_id."""
         deps = get_tool_dependencies(ctx)
         query = build_traffic_query(
             preset=preset,

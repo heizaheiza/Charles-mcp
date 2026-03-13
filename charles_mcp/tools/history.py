@@ -54,12 +54,14 @@ def register_history_tools(mcp: FastMCP) -> None:
         request_json_query: Optional[str] = None,
         response_json_query: Optional[str] = None,
         include_body_preview: bool = True,
-        max_items: int = 20,
-        max_preview_chars: int = 256,
-        max_headers_per_side: int = 8,
+        max_items: int = 10,
+        max_preview_chars: int = 128,
+        max_headers_per_side: int = 6,
         scan_limit: int = 500,
     ) -> TrafficQueryResult:
-        """Analyze a saved recording snapshot with compact summaries."""
+        """Analyze a saved recording snapshot with compact summaries.
+        Returns structured TrafficSummary items with matched_fields and match_reasons.
+        Use get_traffic_entry_detail to drill down into a specific entry_id afterwards."""
         deps = get_tool_dependencies(ctx)
         query = build_traffic_query(
             preset=preset,
@@ -98,9 +100,13 @@ def register_history_tools(mcp: FastMCP) -> None:
         capture_id: Optional[str] = None,
         recording_path: Optional[str] = None,
         include_full_body: bool = False,
-        max_body_chars: int = 4096,
+        max_body_chars: int = 2048,
     ) -> TrafficDetailResult:
-        """Load one traffic entry detail view for drill-down inspection."""
+        """Load one traffic entry detail view for drill-down inspection.
+        Requires entry_id from a prior summary/query call.
+        For history entries, pass recording_path from the summary.
+        For live entries, pass capture_id from the summary.
+        Keep include_full_body=false unless you specifically need the raw body text."""
         deps = get_tool_dependencies(ctx)
         return await deps.traffic_query_service.get_detail(
             source=source,
@@ -155,8 +161,8 @@ def register_history_tools(mcp: FastMCP) -> None:
         request_json_query: Optional[str] = None,
         response_json_query: Optional[str] = None,
         max_groups: int = 10,
-        max_preview_chars: int = 256,
-        max_headers_per_side: int = 8,
+        max_preview_chars: int = 128,
+        max_headers_per_side: int = 6,
         scan_limit: int = 500,
     ) -> CaptureAnalysisGroupsResult:
         """Group analyzed traffic so the agent can inspect hot spots with lower token cost."""

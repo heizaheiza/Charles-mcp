@@ -200,6 +200,14 @@ This path is optimized for finding hotspots first, then drilling down into one c
 
 This path is optimized for browsing saved recordings and then drilling into selected entries.
 
+## Current Version Highlights
+
+- `read_live_capture` and `peek_live_capture` now return route-level summary fields only, such as `host`, `method`, `path`, and `status`, instead of raw Charles entries. This keeps repeated polling from blowing up the context window.
+- `query_live_capture_entries` is now a read-only analysis path and does not advance the live cursor. You can reuse the same `capture_id` with different filters without consuming the historical increment.
+- `analyze_recorded_traffic` and `query_live_capture_entries` summaries now expose `matched_fields` and `match_reasons`, so an agent can explain why a request was selected.
+- `get_traffic_entry_detail` now defaults to `include_full_body=false` and `max_body_chars=2048`. When the estimated detail payload exceeds about 12,000 characters, the tool adds a warning suggesting a narrower request.
+- Summary and detail output automatically strip `null` values and hide internal fields such as `header_map`, `parsed_json`, `parsed_form`, and `lower_name`. Use the `headers` list when you need header values.
+
 ## Tool Catalog
 
 This README documents the recommended tool surface only. Compatibility-only aliases are intentionally not explained here.
@@ -209,10 +217,10 @@ This README documents the recommended tool surface only. Compatibility-only alia
 | Tool | What it does | Typical use |
 | --- | --- | --- |
 | `start_live_capture` | Starts or adopts the current live capture and returns `capture_id` | Before realtime inspection begins |
-| `read_live_capture` | Reads incremental live entries by cursor | When consuming new traffic continuously |
-| `peek_live_capture` | Previews new live entries without advancing the cursor | When you want to inspect new traffic without moving the reader state |
+| `read_live_capture` | Reads incremental live entries by cursor and returns compact route summaries only | When consuming new traffic continuously and you only need host/path/status first |
+| `peek_live_capture` | Previews new live entries without advancing the cursor and returns compact route summaries only | When you want to inspect new traffic without moving the reader state |
 | `stop_live_capture` | Stops the capture and optionally persists a snapshot | When closing or exporting a live session |
-| `query_live_capture_entries` | Produces structured summary output for a live capture | When filtering high-value requests out of current traffic |
+| `query_live_capture_entries` | Produces structured summary output for a live capture without advancing the cursor | When repeatedly filtering high-value requests out of current traffic |
 
 ### Analysis tools
 
@@ -220,8 +228,8 @@ This README documents the recommended tool surface only. Compatibility-only alia
 | --- | --- | --- |
 | `group_capture_analysis` | Aggregates live or history traffic by group key | When you want the lowest-token hotspot view |
 | `get_capture_analysis_stats` | Returns coarse traffic class counts | When you want a quick distribution view |
-| `get_traffic_entry_detail` | Loads detail for one specific entry | After you already identified a target `entry_id` |
-| `analyze_recorded_traffic` | Produces structured summary output for a saved recording | When analyzing a `.chlsj` snapshot |
+| `get_traffic_entry_detail` | Loads detail for one specific entry and warns when the payload is too large | After you already identified a target `entry_id` |
+| `analyze_recorded_traffic` | Produces structured summary output for a saved recording with match reasons | When analyzing a `.chlsj` snapshot |
 
 ### History tools
 
@@ -254,7 +262,26 @@ Use `group_capture_analysis`, `query_live_capture_entries`, or `analyze_recorded
 
 Do not default to `include_full_body=true` unless there is a clear reason.
 
-### 3. History detail needs stable source identity
+### 3. Output is optimized for token budgets
+
+All summary and detail outputs have been serialized lean:
+
+- Internal fields like `header_map`, `parsed_json`, `parsed_form`, and `lower_name` are excluded from tool output
+- `null` values are stripped automatically during serialization
+- When `full_text` is present in a detail view, the redundant `preview_text` is removed
+
+Default parameters have been lowered to protect the context window:
+
+| Parameter | Old default | New default |
+| --- | --- | --- |
+| `max_items` | 20 | 10 |
+| `max_preview_chars` | 256 | 128 |
+| `max_headers_per_side` | 8 | 6 |
+| `max_body_chars` | 4096 | 2048 |
+
+Higher values can still be passed explicitly when a wider view is needed.
+
+### 4. History detail needs stable source identity
 
 History summaries return `recording_path`. Live summaries return `capture_id`.
 
@@ -263,7 +290,7 @@ For `get_traffic_entry_detail`:
 - prefer `recording_path` for history
 - prefer `capture_id` for live
 
-### 4. `stop_live_capture` failures are recoverable
+### 5. `stop_live_capture` failures are recoverable
 
 `stop_live_capture` has two stable end states:
 

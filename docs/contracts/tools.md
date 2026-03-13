@@ -20,6 +20,7 @@
 3. 默认把 summary 当作主数据源，不要一上来拉 full body。
 4. `include_sensitive` 仅为兼容保留，不再影响输出。
 5. 只有 `stop_live_capture.status="stopped"` 才表示真正关闭完成。
+6. 输出已做序列化瘦身：`header_map`、`parsed_json`、`parsed_form`、`lower_name` 不在输出中；`null` 值自动剥离。
 
 ## 推荐工具范围
 
@@ -144,6 +145,21 @@
 2. history 场景使用 `recording_path`
 3. live 场景使用 `capture_id`
 4. 没有明确必要时，不要默认 `include_full_body=true`
+
+默认参数（已针对 token 预算优化）：
+
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `include_full_body` | `false` | 是否包含完整 body |
+| `max_body_chars` | `2048` | full_text 最大字符数 |
+
+输出序列化规则：
+
+- `header_map` 不出现在输出中（仅用于内部匹配），请从 `headers` 列表获取请求头信息
+- `parsed_json`、`parsed_form` 不出现在输出中（由 `full_text` 或 `preview_text` 覆盖）
+- `full_text` 存在时，冗余的 `preview_text` 会被自动移除
+- 所有值为 `null` 的字段在输出中被自动剥离
+- 输出超过 12,000 字符时，`warnings` 中会提示缩小请求范围
 
 history detail 绑定规则：
 

@@ -264,7 +264,10 @@ async def test_get_traffic_entry_detail_returns_history_detail_view(
     assert detail["source"] == "history"
     assert detail["entry_id"] == entry_id
     assert detail["detail"]["entry"]["request"]["body"]["kind"] == "json"
-    assert detail["detail"]["entry"]["request"]["header_map"]["authorization"] == ["Bearer live-secret"]
+    req_headers = detail["detail"]["entry"]["request"]["headers"]
+    auth = next(h for h in req_headers if h["name"] == "Authorization")
+    assert auth["value"] == "Bearer live-secret"
+    assert "header_map" not in detail["detail"]["entry"]["request"]
     assert detail["detail"]["entry"]["response"]["body"]["preview_text"] == '{"ok":true,"access_token":"token-value"}'
 
 

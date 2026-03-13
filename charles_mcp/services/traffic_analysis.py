@@ -8,7 +8,7 @@ import jmespath
 
 from charles_mcp.analyzers.headers import build_header_highlights
 from charles_mcp.schemas.analysis import CaptureAnalysisStatsResult
-from charles_mcp.schemas.traffic import TrafficDetail, TrafficEntry, TrafficMatch, TrafficSummary
+from charles_mcp.schemas.traffic import TrafficDetail, TrafficEntry, TrafficMatch, TrafficSummary, HttpMessage
 from charles_mcp.schemas.traffic_query import TrafficQuery
 
 
@@ -198,6 +198,7 @@ class TrafficAnalysisService:
         )
 
     def build_detail(self, entry: TrafficEntry) -> TrafficDetail:
+        entry = self._compact_entry_for_detail(entry)
         return TrafficDetail(
             entry=entry,
             raw_body_included=bool(
@@ -208,6 +209,22 @@ class TrafficAnalysisService:
             or entry.request.body.preview_truncated
             or entry.response.body.preview_truncated,
         )
+
+    @staticmethod
+    def _compact_entry_for_detail(entry: TrafficEntry) -> TrafficEntry:
+        """Strip redundant preview fields when full_text is present."""
+        updates: dict = {}
+        for side in ("request", "response"):
+            msg: HttpMessage = getattr(entry, side)
+            body = msg.body
+            if body.full_text is not None and body.preview_text is not None:
+                compact_body = body.model_copy(
+                    update={"preview_text": None, "preview_truncated": False},
+                )
+                updates[side] = msg.model_copy(update={"body": compact_body})
+        if updates:
+            return entry.model_copy(update=updates)
+        return entry
 
     def build_stats(
         self,
