@@ -84,8 +84,10 @@ CHARLES_MANAGE_LIFECYCLE = "false"
 
 Copy-paste the following prompt into any AI agent (Claude Code, ChatGPT, Gemini CLI, Cursor Agent, etc.) and it will install and configure charles-mcp automatically:
 
+[![Auto-install Recommended](https://img.shields.io/badge/Auto--install-Recommended-e53935?style=for-the-badge)](#auto-install-via-ai-agent)
+
 <details>
-<summary>Click to expand auto-install prompt</summary>
+<summary><strong>🔴 Click to expand auto-install prompt (Recommended)</strong></summary>
 
 ```text
 Install the "charles-mcp" MCP server and configure it for my MCP client. Follow these steps exactly:

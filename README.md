@@ -84,8 +84,10 @@ CHARLES_MANAGE_LIFECYCLE = "false"
 
 将以下提示词复制粘贴给任意 AI agent（Claude Code、ChatGPT、Gemini CLI、Cursor Agent 等），agent 会自动完成安装和配置：
 
+[![自动安装推荐](https://img.shields.io/badge/%E8%87%AA%E5%8A%A8%E5%AE%89%E8%A3%85-%E6%8E%A8%E8%8D%90-e53935?style=for-the-badge)](#让-ai-自动安装)
+
 <details>
-<summary>点击展开自动安装提示词</summary>
+<summary><strong>🔴 点击展开自动安装提示词（推荐）</strong></summary>
 
 ```text
 Install the "charles-mcp" MCP server and configure it for my MCP client. Follow these steps exactly:
