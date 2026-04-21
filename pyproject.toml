@@ -53,6 +53,9 @@ Documentation = "https://github.com/heizaheiza/Charles-mcp/blob/main/docs/README
 Repository = "https://github.com/heizaheiza/Charles-mcp"
 Issues = "https://github.com/heizaheiza/Charles-mcp/issues"
 
+[tool.setuptools]
+license-files = ["LICENSE"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["charles_mcp*"]

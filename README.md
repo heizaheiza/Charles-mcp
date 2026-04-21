@@ -371,8 +371,6 @@ python -c "from charles_mcp.main import main; main()"
 ### 2026-04-21 (v3.0.3)
 
 - 完成公开仓库历史整理，为整改后的公开历史发布做准备。
-- 新增 `PROVENANCE.md`，并收敛 README 中的来源说明措辞。
-- 暂时移除 README 中的赞赏相关内容，聚焦项目文档与发布说明。
 
 ### 2026-04-15 (v3.0.2)
 
@@ -437,7 +435,7 @@ python -c "from charles_mcp.main import main; main()"
 - [English README](README.en.md)
 - [Tool Contract](docs/contracts/tools.md)
 
-## 致谢与来源说明
+## 来源说明
 
 本项目最初受到 [tianhetonghua/Charles-mcp-server](https://github.com/tianhetonghua/Charles-mcp-server) 的启发，由于该项目使用体验较差，此后代码库已进行了大幅重写与重组，面向不同的架构和使用场景，并由当前维护者独立持续维护。
 
