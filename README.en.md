@@ -8,9 +8,6 @@
 
 > **Repository maintenance notice (2026-04-21)**  
 > The public Git history for this repository was reorganized on 2026-04-21. If you cloned this repository before that date, please re-clone it before making any further contributions. Do not merge or push from older local clones, as that may reintroduce outdated history.
->
-> **仓库维护公告（2026-04-21）**  
-> 本仓库的公开 Git 历史已于 2026-04-21 重新整理。如果你在该日期之前克隆过本仓库，请在继续贡献前重新克隆。不要从旧的本地克隆直接合并或推送，否则可能会把过期历史重新引入仓库。
 
 Charles MCP Server connects Charles Proxy to MCP clients so an agent can inspect live traffic, analyze saved recordings, and expand individual requests only when needed.
 
@@ -217,8 +214,6 @@ This path is optimized for browsing saved recordings and then drilling into sele
 
 ## Current Version Highlights (v3.0.3)
 
-- The public repository history and provenance wording have been cleaned up: `PROVENANCE.md` was added, and the README now uses a narrower, more verifiable provenance statement.
-- Donation-related content has been temporarily removed from the README so the public repository documentation stays focused on the project itself during remediation.
 - The default public tool surface is now tightened to canonical 31 tools; legacy aliases (`filter_func`, `proxy_by_time`, `list_sessions`) are no longer exposed by default.
 - Added explicit compatibility toggle support: `create_server(expose_legacy_tools=True)` or `CHARLES_EXPOSE_LEGACY_TOOLS=true`.
 - Documentation entrypoints now converge on `docs/README.md`, with `docs/migrations/legacy-tools.md` as the authoritative legacy migration guide.
