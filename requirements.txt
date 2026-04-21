@@ -1,0 +1,10 @@
+# Runtime dependencies for Charles MCP Server
+mcp>=1.25.0
+httpx>=0.27.0
+pydantic>=2.12.0
+jmespath>=1.0.1
+defusedxml>=0.7.1
+brotli>=1.1.0
+zstandard>=0.23.0
+protobuf>=5.0.0
+typing_extensions>=4.0.0; python_version < "3.11"

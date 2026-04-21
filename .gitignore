@@ -1,0 +1,34 @@
+﻿# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+
+# Test and tool caches
+.pytest_cache/
+.tmp-pytest/
+.tmp-pytest-*/
+.mypy_cache/
+.ruff_cache/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Local environment files
+.env
+
+# Charles runtime data and saved captures
+back/
+package/
+*.chlsj
+
+# Local logs and scratch files
+debug.log
+run.txt
+nul
+tmp-vnext-*

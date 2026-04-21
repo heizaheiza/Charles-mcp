@@ -1,0 +1,77 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "charles-mcp"
+version = "3.0.3"
+description = "Charles Proxy MCP server with live capture, structured traffic analysis, and agent-friendly tool contracts"
+readme = {file = "README.en.md", content-type = "text/markdown"}
+license = "MIT"
+authors = [{name = "heizaheiza"}]
+requires-python = ">=3.10"
+keywords = ["mcp", "charles-proxy", "ai-agent", "openai", "codex", "developer-tools", "traffic-analysis", "network-debugging"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: Proxy Servers",
+    "Topic :: Software Development :: Debuggers",
+]
+dependencies = [
+    "mcp>=1.25.0",
+    "httpx>=0.27.0",
+    "pydantic>=2.12.0",
+    "jmespath>=1.0.1",
+    "defusedxml>=0.7.1",
+    "brotli>=1.1.0",
+    "zstandard>=0.23.0",
+    "protobuf>=5.0.0",
+    "typing_extensions>=4.0.0; python_version < \"3.11\"",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.0",
+    "pytest-asyncio>=1.3.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+    "tomli>=2.0.1; python_version < \"3.11\"",
+]
+
+[project.scripts]
+charles-mcp = "charles_mcp.main:main"
+
+[project.urls]
+Homepage = "https://pypi.org/project/charles-mcp/"
+Documentation = "https://github.com/heizaheiza/Charles-mcp/blob/main/docs/README.md"
+Repository = "https://github.com/heizaheiza/Charles-mcp"
+Issues = "https://github.com/heizaheiza/Charles-mcp/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["charles_mcp*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "D", "UP"]
+ignore = ["D100", "D104", "D203", "D213"]
+
