@@ -8,9 +8,6 @@
 
 > **仓库维护公告（2026-04-21）**  
 > 本仓库的公开 Git 历史已于 2026-04-21 重新整理。如果你在该日期之前克隆过本仓库，请在继续贡献前重新克隆。不要从旧的本地克隆直接合并或推送，否则可能会把过期历史重新引入仓库。
->
-> **Repository maintenance notice (2026-04-21)**  
-> The public Git history for this repository was reorganized on 2026-04-21. If you cloned this repository before that date, please re-clone it before making any further contributions. Do not merge or push from older local clones, as that may reintroduce outdated history.
 
 Charles MCP Server 用于把 Charles Proxy 接入 MCP 客户端，让 agent 可以稳定地读取实时流量、分析历史录包，并在需要时再展开单条请求细节。
 
@@ -217,8 +214,6 @@ Step 6 — Report:
 
 ## 当前版本重点变化（v3.0.3）
 
-- 仓库公开历史与文档来源说明已完成整理：新增 `PROVENANCE.md`，并将 README 中的来源表述调整为更克制、可核验的版本。
-- 整改期间暂时移除了 README 中的赞赏相关内容，使公开仓库说明聚焦于项目本身。
 - 默认公开工具面已收紧为 canonical 31 个工具；legacy aliases（`filter_func`、`proxy_by_time`、`list_sessions`）不再默认暴露。
 - 新增显式兼容开关：`create_server(expose_legacy_tools=True)` 或环境变量 `CHARLES_EXPOSE_LEGACY_TOOLS=true` 可启用 legacy 兼容层。
 - 文档入口收口到 `docs/README.md`，并新增 `docs/migrations/legacy-tools.md` 作为 legacy 迁移权威说明。
@@ -371,21 +366,6 @@ python charles-mcp-server.py
 python -c "from charles_mcp.main import main; main()"
 ```
 
-## 致谢与来源说明
-
-本项目最初受到 [tianhetonghua/Charles-mcp-server](https://github.com/tianhetonghua/Charles-mcp-server) 的启发，谨此致谢。此后代码库已进行了大幅重写与重组，面向不同的架构和使用场景，并由当前维护者独立持续维护。
-
-前作更偏向逆向工程 / 安全研究场景，核心能力围绕 harvest、keyword interlock、加密检测和任务级缓存展开；而这个项目的目标是让通用 AI agent 在 Claude Code、Codex、Cursor 等 MCP 客户端里，稳定、低 token、可重复地分析实时流量和历史录包。
-
-后续实现主要围绕这些差异化目标展开：
-
-- 统一 live capture 与 history analysis 的工具语义，而不是让 agent 在“收割”“过滤”“录包”之间切换不同心智模型
-- 默认走 summary-first、detail-on-demand，避免 agent 一上来就消费大块原始抓包，导致上下文快速爆掉
-- 提供稳定的 `capture_id`、`cursor`、`recording_path` 语义，让 agent 可以反复查询而不会把实时数据“读没了”
-- 提供更严格的工具契约、错误边界和可恢复行为，适配 AI Agent 生态对协议一致性和自动化稳定性的要求
-
-前作提供了起点，而这个仓库则是在不同目标下逐步演进出的独立实现。更简短的来源说明见 [PROVENANCE.md](PROVENANCE.md)。
-
 ## 更新日志
 
 ### 2026-04-21 (v3.0.3)
@@ -456,3 +436,18 @@ python -c "from charles_mcp.main import main; main()"
 - [Docs](docs/README.md)
 - [English README](README.en.md)
 - [Tool Contract](docs/contracts/tools.md)
+
+## 致谢与来源说明
+
+本项目最初受到 [tianhetonghua/Charles-mcp-server](https://github.com/tianhetonghua/Charles-mcp-server) 的启发，由于该项目使用体验较差，此后代码库已进行了大幅重写与重组，面向不同的架构和使用场景，并由当前维护者独立持续维护。
+
+前作核心能力是围绕缓存展开；而本项目的目标是让通用 AI agent 在 Claude Code、Codex、Cursor 等 MCP 客户端里，稳定、低 token、可重复地分析实时流量和历史录包。
+
+后续实现主要围绕这些差异化目标展开：
+
+- 统一 live capture 与 history analysis 的工具语义，而不是让 agent 在“收割”“过滤”“录包”之间切换不同心智模型
+- 默认走 summary-first、detail-on-demand，避免 agent 一上来就消费大块原始抓包，导致上下文快速爆掉
+- 提供稳定的 `capture_id`、`cursor`、`recording_path` 语义，让 agent 可以反复查询而不会把实时数据“读没了”
+- 提供更严格的工具契约、错误边界和可恢复行为，适配 AI Agent 生态对协议一致性和自动化稳定性的要求
+
+前作提供了起点，而这个仓库则是在不同目标下逐步演进出的独立实现。
