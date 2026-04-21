@@ -6,6 +6,12 @@
 
 [Docs](docs/README.md) | [Tool Contract](docs/contracts/tools.md) | [AGENTS](AGENTS.md) | [Agent Workflow Guide](docs/agent-workflows.md) | [English README](README.en.md)
 
+> **仓库维护公告（2026-04-21）**  
+> 本仓库的公开 Git 历史已于 2026-04-21 重新整理。如果你在该日期之前克隆过本仓库，请在继续贡献前重新克隆。不要从旧的本地克隆直接合并或推送，否则可能会把过期历史重新引入仓库。
+>
+> **Repository maintenance notice (2026-04-21)**  
+> The public Git history for this repository was reorganized on 2026-04-21. If you cloned this repository before that date, please re-clone it before making any further contributions. Do not merge or push from older local clones, as that may reintroduce outdated history.
+
 Charles MCP Server 用于把 Charles Proxy 接入 MCP 客户端，让 agent 可以稳定地读取实时流量、分析历史录包，并在需要时再展开单条请求细节。
 
 它解决的核心问题只有三个：
