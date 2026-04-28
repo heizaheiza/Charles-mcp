@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/heizaheiza-charles-mcp-badge.png)](https://mseep.ai/app/heizaheiza-charles-mcp)
+
 # Charles MCP Server
 
 [![PyPI version](https://img.shields.io/pypi/v/charles-mcp.svg)](https://pypi.org/project/charles-mcp/)
