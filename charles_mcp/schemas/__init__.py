@@ -3,8 +3,8 @@
 from charles_mcp.schemas.analysis import (
     CaptureAnalysisGroupsResult,
     CaptureAnalysisStatsResult,
-    TrafficGroupSummary,
     TrafficDetailResult,
+    TrafficGroupSummary,
     TrafficQueryResult,
 )
 from charles_mcp.schemas.history import (

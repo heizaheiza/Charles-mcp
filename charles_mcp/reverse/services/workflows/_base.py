@@ -84,8 +84,10 @@ class _BaseLiveWorkflow:
     def _resolve_mutation_policy(self, **extra: Any) -> dict[str, Any]:
         # Subclasses with policy that depends on runtime kwargs (e.g.
         # signature_hints) override this. Default returns the class-level
-        # mutation_policy attribute.
-        return getattr(self, "mutation_policy")  # noqa: B009 — explicit lookup
+        # mutation_policy attribute, narrowed back to dict[str, Any] for
+        # callers that consume it as a structured policy.
+        policy: dict[str, Any] = self.mutation_policy  # type: ignore[attr-defined]
+        return policy
 
     def _extra_summary(self, **extra: Any) -> dict[str, Any]:
         return {}

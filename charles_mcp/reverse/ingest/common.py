@@ -51,4 +51,4 @@ def reason_phrase(first_line: str | None) -> str | None:
 
 
 def build_body_blob_id(capture_id: str, sequence_no: int, side: str) -> str:
-    return hashlib.sha1(f"{capture_id}|{sequence_no}|{side}".encode("utf-8")).hexdigest()
+    return hashlib.sha1(f"{capture_id}|{sequence_no}|{side}".encode()).hexdigest()

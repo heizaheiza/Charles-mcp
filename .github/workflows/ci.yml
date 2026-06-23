@@ -7,6 +7,31 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    name: Lint and type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run ruff
+        run: python -m ruff check charles_mcp tests
+
+      - name: Run mypy on package
+        run: python -m mypy charles_mcp
+
   test:
     runs-on: ubuntu-latest
     strategy:

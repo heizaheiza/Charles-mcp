@@ -35,15 +35,27 @@ class WorkflowService:
         self.query_service = query_service
         self.decode_service = decode_service
         self.replay_service = replay_service
-        deps = {
-            "live_service": live_service,
-            "query_service": query_service,
-            "decode_service": decode_service,
-            "replay_service": replay_service,
-        }
-        self._login_workflow = LoginWorkflow(**deps)
-        self._api_workflow = ApiWorkflow(**deps)
-        self._signature_workflow = SignatureWorkflow(**deps)
+        # Pass services as explicit keyword arguments so mypy preserves
+        # parameter types through each strategy constructor. Routing them
+        # via a generic dict (**deps) would erase the per-key types.
+        self._login_workflow = LoginWorkflow(
+            live_service=live_service,
+            query_service=query_service,
+            decode_service=decode_service,
+            replay_service=replay_service,
+        )
+        self._api_workflow = ApiWorkflow(
+            live_service=live_service,
+            query_service=query_service,
+            decode_service=decode_service,
+            replay_service=replay_service,
+        )
+        self._signature_workflow = SignatureWorkflow(
+            live_service=live_service,
+            query_service=query_service,
+            decode_service=decode_service,
+            replay_service=replay_service,
+        )
 
     async def analyze_live_login_flow(self, **kwargs: Any) -> dict[str, Any]:
         return await self._login_workflow.run(**kwargs)

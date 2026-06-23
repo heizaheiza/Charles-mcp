@@ -14,8 +14,8 @@ Example:
 __version__ = "3.0.3"
 __author__ = "heizaheiza"
 
-from charles_mcp.config import Config
 from charles_mcp.client import CharlesClient
+from charles_mcp.config import Config
 
 __all__ = ["Config", "CharlesClient", "__version__"]
 

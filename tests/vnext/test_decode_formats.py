@@ -1,6 +1,5 @@
 import base64
 import gzip
-import json
 
 import brotli
 import pytest
@@ -15,11 +14,11 @@ from charles_mcp.reverse.storage import SQLiteStore
 
 def _make_single_transaction_xml(*, content_type: str, body_text: str, body_encoding: str = "plain", content_encoding: str | None = None) -> str:
     response_headers = [
-        "<header><name>Content-Type</name><value>{}</value></header>".format(content_type)
+        f"<header><name>Content-Type</name><value>{content_type}</value></header>"
     ]
     if content_encoding:
         response_headers.append(
-            "<header><name>Content-Encoding</name><value>{}</value></header>".format(content_encoding)
+            f"<header><name>Content-Encoding</name><value>{content_encoding}</value></header>"
         )
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <charles-session>

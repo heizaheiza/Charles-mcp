@@ -1,9 +1,10 @@
+import json
+import zipfile
+
 from charles_mcp.reverse.config import VNextConfig
 from charles_mcp.reverse.models import CaptureSourceFormat, CaptureSourceKind
 from charles_mcp.reverse.services import IngestService
 from charles_mcp.reverse.storage import SQLiteStore
-import json
-import zipfile
 
 
 def test_native_import_parses_zip_archive_directly(tmp_path):

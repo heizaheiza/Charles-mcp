@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 import charles_mcp.reverse.config as reverse_config_module
 from charles_mcp.config import Config

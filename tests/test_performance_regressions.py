@@ -4,11 +4,11 @@ import pytest
 
 from charles_mcp.config import Config
 from charles_mcp.live_state import LiveCaptureManager
+from charles_mcp.schemas.traffic_query import TrafficQuery
 from charles_mcp.services.history_capture import RecordingHistoryService
 from charles_mcp.services.traffic_analysis import TrafficAnalysisService
 from charles_mcp.services.traffic_normalizer import TrafficNormalizer
 from charles_mcp.services.traffic_query_service import TrafficQueryService
-from charles_mcp.schemas.traffic_query import TrafficQuery
 
 
 def _entry(path: str = "/api/login") -> dict:

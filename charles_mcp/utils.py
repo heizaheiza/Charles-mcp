@@ -5,12 +5,10 @@
 """
 
 import io
-import os
-import sys
-import shutil
 import logging
-from pathlib import Path
-from typing import Optional
+import os
+import shutil
+import sys
 from logging.handlers import RotatingFileHandler
 
 
@@ -210,7 +208,7 @@ def safe_remove_tree(path: str) -> bool:
         return False
 
 
-def get_latest_file(directory: str, extension: str = ".chlsj") -> Optional[str]:
+def get_latest_file(directory: str, extension: str = ".chlsj") -> str | None:
     """
     获取目录中指定扩展名的最新文件。
 
@@ -293,7 +291,7 @@ def format_bytes(size: int) -> str:
     return f"{size_value:.2f} PB"
 
 
-def validate_regex(pattern: str) -> tuple[bool, Optional[str]]:
+def validate_regex(pattern: str) -> tuple[bool, str | None]:
     """
     验证正则表达式是否有效且安全。
 

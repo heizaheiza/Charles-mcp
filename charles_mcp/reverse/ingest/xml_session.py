@@ -7,7 +7,7 @@ import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
-from defusedxml import ElementTree as ET
+from defusedxml import ElementTree as ET  # noqa: N817 — stdlib idiom
 
 from charles_mcp.reverse.ingest.common import (
     build_body_blob_id,

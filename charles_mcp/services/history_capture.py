@@ -7,7 +7,7 @@ import os
 import re
 from copy import deepcopy
 from pathlib import Path
-from typing import Optional, cast
+from typing import cast
 
 from charles_mcp.client import CharlesClient
 from charles_mcp.config import Config
@@ -91,9 +91,9 @@ class RecordingHistoryService:
     async def query_latest(
         self,
         *,
-        host_contains: Optional[str] = None,
-        method_normalized: Optional[str] = None,
-        keyword_regex: Optional[str] = None,
+        host_contains: str | None = None,
+        method_normalized: str | None = None,
+        keyword_regex: str | None = None,
         keep_request: bool = True,
         keep_response: bool = True,
     ) -> list[dict]:
@@ -110,9 +110,9 @@ class RecordingHistoryService:
     async def query_latest_result(
         self,
         *,
-        host_contains: Optional[str] = None,
-        method_normalized: Optional[str] = None,
-        keyword_regex: Optional[str] = None,
+        host_contains: str | None = None,
+        method_normalized: str | None = None,
+        keyword_regex: str | None = None,
         keep_request: bool = True,
         keep_response: bool = True,
     ) -> RecordedTrafficQueryResult:
@@ -178,17 +178,17 @@ class RecordingHistoryService:
             warnings=warnings,
         )
 
-    async def get_snapshot(self, path: Optional[str] = None) -> list[dict]:
+    async def get_snapshot(self, path: str | None = None) -> list[dict]:
         if path:
             resolved_path = self._resolve_recording_path(path)
-            with open(resolved_path, "r", encoding="utf-8") as handle:
+            with open(resolved_path, encoding="utf-8") as handle:
                 return cast(list[dict], json.load(handle))
         return await self.load_latest()
 
-    async def get_snapshot_result(self, path: Optional[str] = None) -> RecordingSnapshotResult:
+    async def get_snapshot_result(self, path: str | None = None) -> RecordingSnapshotResult:
         if path:
             resolved_path = self._resolve_recording_path(path)
-            with open(resolved_path, "r", encoding="utf-8") as handle:
+            with open(resolved_path, encoding="utf-8") as handle:
                 items = cast(list[dict], json.load(handle))
             return RecordingSnapshotResult(
                 source="history",
@@ -215,7 +215,7 @@ class RecordingHistoryService:
             total_items=len(items),
         )
 
-    def validate_keyword_regex(self, keyword_regex: Optional[str]) -> tuple[bool, Optional[str]]:
+    def validate_keyword_regex(self, keyword_regex: str | None) -> tuple[bool, str | None]:
         if not keyword_regex:
             return (True, None)
         return validate_regex(keyword_regex)
@@ -224,9 +224,9 @@ class RecordingHistoryService:
         self,
         raw_data: list[dict],
         *,
-        host_contains: Optional[str] = None,
-        method_normalized: Optional[str] = None,
-        keyword_regex: Optional[str] = None,
+        host_contains: str | None = None,
+        method_normalized: str | None = None,
+        keyword_regex: str | None = None,
         keep_request: bool = True,
         keep_response: bool = True,
     ) -> list[dict]:
@@ -246,7 +246,7 @@ class RecordingHistoryService:
             if method_normalized and method_normalized != entry.get("method", "").upper():
                 continue
 
-            match_info: Optional[dict] = None
+            match_info: dict | None = None
             if compiled_regex:
                 try:
                     entry_str = json.dumps(

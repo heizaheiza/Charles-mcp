@@ -13,7 +13,7 @@ from charles_mcp.reverse.services import (
     WorkflowService,
 )
 from charles_mcp.reverse.storage import SQLiteStore
-from tests.vnext.test_live_analysis_service import _FakeControlService, _build_snapshot
+from tests.vnext.test_live_analysis_service import _build_snapshot, _FakeControlService
 
 
 def _build_login_workflow_snapshot() -> str:

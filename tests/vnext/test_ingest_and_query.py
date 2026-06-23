@@ -9,7 +9,6 @@ from charles_mcp.reverse.models import CaptureSourceFormat, CaptureSourceKind
 from charles_mcp.reverse.services import DecodeService, IngestService, QueryService
 from charles_mcp.reverse.storage import SQLiteStore
 
-
 SAMPLE_XML = """\
 <?xml version="1.0" encoding="UTF-8"?>
 <charles-session>

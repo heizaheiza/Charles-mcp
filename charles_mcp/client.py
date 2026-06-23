@@ -5,12 +5,13 @@ Charles API 异步客户端模块。
 使用 httpx 异步客户端确保不阻塞事件循环。
 """
 
+import asyncio
 import json
 import logging
-import asyncio
+from collections.abc import Callable
 from datetime import datetime
-from typing import Optional, Any, Callable, cast
 from pathlib import Path
+from typing import Any, cast
 
 import httpx
 
@@ -69,7 +70,7 @@ class CharlesClient:
         "off": "deactivate",
     }
 
-    def __init__(self, config: Optional[Config] = None) -> None:
+    def __init__(self, config: Config | None = None) -> None:
         """
         初始化 Charles 客户端。
 
@@ -77,7 +78,7 @@ class CharlesClient:
             config: 配置对象，如果为 None 则使用全局配置
         """
         self.config = config or get_config()
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     async def __aenter__(self) -> "CharlesClient":
         """异步上下文管理器入口。"""
@@ -270,7 +271,7 @@ class CharlesClient:
         normalized = self.THROTTLE_PRESETS.get(preset.lower(), preset)
 
         try:
-            await self._get(f"/throttling/activate", params={"preset": normalized})
+            await self._get("/throttling/activate", params={"preset": normalized})
             logger.info(f"网络节流已激活: {normalized}")
             return True
         except CharlesClientError as e:
@@ -355,7 +356,7 @@ class CharlesClient:
             logger.warning(f"发送退出命令时出错: {e}")
             return False
 
-    async def get_info(self) -> Optional[dict]:
+    async def get_info(self) -> dict | None:
         """
         获取 Charles 信息。
 
@@ -374,8 +375,8 @@ class CharlesClient:
     async def record_session(
         self,
         duration: int,
-        save_path: Optional[str] = None,
-        progress_callback: Optional[Callable[[int, int], Any]] = None,
+        save_path: str | None = None,
+        progress_callback: Callable[[int, int], Any] | None = None,
     ) -> list[dict]:
         """
         录制指定时长的流量会话。
@@ -457,7 +458,7 @@ class CharlesClient:
 
         return data
 
-    async def load_latest_session(self, package_dir: Optional[str] = None) -> list[dict]:
+    async def load_latest_session(self, package_dir: str | None = None) -> list[dict]:
         """
         加载最新的会话文件。
 
@@ -478,7 +479,7 @@ class CharlesClient:
 
         logger.info(f"加载历史会话: {latest_file}")
 
-        with open(latest_file, "r", encoding="utf-8") as f:
+        with open(latest_file, encoding="utf-8") as f:
             return cast(list[dict], json.load(f))
 
     def generate_filename(self) -> str:

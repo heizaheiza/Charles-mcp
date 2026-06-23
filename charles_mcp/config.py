@@ -8,7 +8,6 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -99,10 +98,10 @@ class Config:
     proxy_port: int = field(default_factory=lambda: int(os.getenv("CHARLES_PROXY_PORT", "8888")))
 
     charles_base_url: str = "http://control.charles"
-    charles_cli_path: Optional[str] = field(default_factory=_detect_charles_cli_path)
+    charles_cli_path: str | None = field(default_factory=_detect_charles_cli_path)
 
-    config_path: Optional[str] = None
-    profiles_dir: Optional[str] = None
+    config_path: str | None = None
+    profiles_dir: str | None = None
     base_dir: str = field(default_factory=_default_base_dir)
     state_dir: str = ""
     package_dir: str = ""
@@ -206,10 +205,10 @@ class Config:
         return str(Path(self.state_dir) / "reverse")
 
     @classmethod
-    def from_env(cls) -> "Config":
+    def from_env(cls) -> Config:
         return cls()
 
-    def _detect_charles_config_path(self) -> Optional[str]:
+    def _detect_charles_config_path(self) -> str | None:
         possible_patterns: list[str] = []
 
         if sys.platform == "win32":
@@ -323,7 +322,7 @@ class Config:
         }
 
 
-_default_config: Optional[Config] = None
+_default_config: Config | None = None
 
 
 def get_config() -> Config:

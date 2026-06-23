@@ -6,7 +6,6 @@ import asyncio
 import json
 import logging
 import os
-from typing import Optional
 
 from charles_mcp.client import CharlesClient, CharlesClientError
 from charles_mcp.config import Config
@@ -31,12 +30,12 @@ class LiveCaptureService:
         config: Config,
         *,
         client_factory=CharlesClient,
-        live_manager: Optional[LiveCaptureManager] = None,
+        live_manager: LiveCaptureManager | None = None,
     ) -> None:
         self.config = config
         self.client_factory = client_factory
         self.live_manager = live_manager or LiveCaptureManager()
-        self._shared_client: Optional[CharlesClient] = None
+        self._shared_client: CharlesClient | None = None
 
     async def _get_shared_client(self) -> CharlesClient:
         """Return the reusable client, creating it on first access."""
@@ -103,7 +102,7 @@ class LiveCaptureService:
         self,
         capture_id: str,
         *,
-        cursor: Optional[int] = None,
+        cursor: int | None = None,
         limit: int = 50,
         advance: bool = True,
     ) -> LiveCaptureReadResult:

@@ -7,7 +7,12 @@ from typing import Any
 
 from charles_mcp.analyzers import classify_entry, normalize_body, normalize_headers
 from charles_mcp.config import Config
-from charles_mcp.schemas.traffic import CaptureSource, HttpMessage, ResourceClassification, TrafficEntry
+from charles_mcp.schemas.traffic import (
+    CaptureSource,
+    HttpMessage,
+    ResourceClassification,
+    TrafficEntry,
+)
 
 
 class TrafficNormalizer:

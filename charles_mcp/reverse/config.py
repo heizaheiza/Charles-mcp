@@ -10,7 +10,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from charles_mcp.config import Config, get_config as get_base_config
+from charles_mcp.config import Config
+from charles_mcp.config import get_config as get_base_config
 
 _MIGRATION_MARKER = ".vnext-state-migration.json"
 

@@ -75,6 +75,11 @@ line-length = 100
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "N", "D", "UP"]
-ignore = ["D100", "D104", "D203", "D213"]
+# D (pydocstyle) is intentionally omitted: forcing a docstring on every
+# public function/class produces low-signal noise that crowds out real
+# issues. E501 (line-too-long) is ignored because ruff format / black
+# already manage line width — flagging it again in lint conflicts with
+# pragmatic long string literals and URLs in docstrings.
+select = ["E", "F", "W", "I", "N", "UP"]
+ignore = ["E501"]
 

@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 
 from charles_mcp.reverse.models import CaptureSourceFormat
 
-
 _SUPPORTED_SUFFIXES: dict[CaptureSourceFormat, tuple[str, ...]] = {
     CaptureSourceFormat.XML: (".xml",),
     CaptureSourceFormat.NATIVE: (".chls", ".chlz"),

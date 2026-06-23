@@ -53,7 +53,7 @@ def build_header_highlights(
     max_items: int = 8,
 ) -> dict[str, str]:
     """Build a compact header preview for summary outputs."""
-    highlights: "OrderedDict[str, str]" = OrderedDict()
+    highlights: OrderedDict[str, str] = OrderedDict()
 
     for key in _HIGHLIGHT_ORDER:
         values = header_map.get(key)

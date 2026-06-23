@@ -8,7 +8,8 @@ from typing import Annotated, Any
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 
-from charles_mcp.config import Config, get_config as get_base_config
+from charles_mcp.config import Config
+from charles_mcp.config import get_config as get_base_config
 from charles_mcp.reverse.config import VNextConfig, build_reverse_config
 from charles_mcp.reverse.models import CaptureSourceFormat, CaptureSourceKind
 from charles_mcp.reverse.services import (
@@ -24,7 +25,6 @@ from charles_mcp.reverse.services.charles_control_service import (
     CharlesControlService,
 )
 from charles_mcp.reverse.storage import SQLiteStore
-
 
 LiveSnapshotFormatParam = Annotated[
     str,

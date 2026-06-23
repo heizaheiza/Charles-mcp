@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-import time
 from uuid import uuid4
 
-from defusedxml import ElementTree as ET
+from defusedxml import ElementTree as ET  # noqa: N817 — stdlib idiom
 
 from charles_mcp.reverse.models import CaptureSourceFormat, CaptureSourceKind
 from charles_mcp.reverse.services.charles_control_service import CharlesControlService

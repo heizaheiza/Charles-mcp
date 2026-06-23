@@ -7,7 +7,7 @@ from collections import defaultdict
 from typing import Any
 
 from charles_mcp.reverse.models import Entry, Finding, FindingSubjectType, FindingType
-from charles_mcp.reverse.services.common import parse_request_parameters, new_identifier
+from charles_mcp.reverse.services.common import new_identifier, parse_request_parameters
 from charles_mcp.reverse.storage import SQLiteStore
 
 

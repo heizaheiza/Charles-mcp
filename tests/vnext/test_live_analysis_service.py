@@ -7,7 +7,6 @@ from charles_mcp.reverse.config import VNextConfig
 from charles_mcp.reverse.models import CaptureSourceFormat
 from charles_mcp.reverse.services import IngestService, LiveAnalysisService, QueryService
 from charles_mcp.reverse.services.live_analysis_service import _count_non_control_transactions
-from charles_mcp.reverse.services.charles_control_service import CharlesControlService
 from charles_mcp.reverse.storage import SQLiteStore
 
 

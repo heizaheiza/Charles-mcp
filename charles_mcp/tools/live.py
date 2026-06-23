@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -98,7 +98,7 @@ def register_live_tools(mcp: FastMCP) -> None:
     async def read_live_capture(
         ctx: ToolContext,
         capture_id: str,
-        cursor: Optional[int] = None,
+        cursor: int | None = None,
         limit: int = 50,
     ) -> LiveCaptureReadResult:
         """Read incremental traffic and advance the cursor.
@@ -121,7 +121,7 @@ def register_live_tools(mcp: FastMCP) -> None:
     async def peek_live_capture(
         ctx: ToolContext,
         capture_id: str,
-        cursor: Optional[int] = None,
+        cursor: int | None = None,
         limit: int = 50,
     ) -> LiveCaptureReadResult:
         """Preview incremental traffic without advancing the cursor.
@@ -159,30 +159,30 @@ def register_live_tools(mcp: FastMCP) -> None:
     async def query_live_capture_entries(
         ctx: ToolContext,
         capture_id: str,
-        cursor: Optional[int] = None,
+        cursor: int | None = None,
         preset: TrafficPreset = "api_focus",
-        host_contains: Optional[str] = None,
-        path_contains: Optional[str] = None,
-        method_in: Optional[list[str]] = None,
-        status_in: Optional[list[int]] = None,
-        resource_class_in: Optional[list[str]] = None,
-        min_priority_score: Optional[int] = None,
-        request_header_name: Optional[str] = None,
-        request_header_value_contains: Optional[str] = None,
-        response_header_name: Optional[str] = None,
-        response_header_value_contains: Optional[str] = None,
-        request_content_type: Optional[str] = None,
-        response_content_type: Optional[str] = None,
-        request_body_contains: Optional[str] = None,
-        response_body_contains: Optional[str] = None,
-        request_json_query: Optional[str] = None,
-        response_json_query: Optional[str] = None,
+        host_contains: str | None = None,
+        path_contains: str | None = None,
+        method_in: list[str] | None = None,
+        status_in: list[int] | None = None,
+        resource_class_in: list[str] | None = None,
+        min_priority_score: int | None = None,
+        request_header_name: str | None = None,
+        request_header_value_contains: str | None = None,
+        response_header_name: str | None = None,
+        response_header_value_contains: str | None = None,
+        request_content_type: str | None = None,
+        response_content_type: str | None = None,
+        request_body_contains: str | None = None,
+        response_body_contains: str | None = None,
+        request_json_query: str | None = None,
+        response_json_query: str | None = None,
         include_body_preview: bool = True,
         max_items: int = 10,
         max_preview_chars: int = 128,
         max_headers_per_side: int = 6,
         scan_limit: int = 500,
-        since_seconds: Optional[int] = None,
+        since_seconds: int | None = None,
     ) -> TrafficQueryResult:
         """Analyze the active live capture with structured summary-first filtering.
         This is the RECOMMENDED tool for inspecting live / ongoing / 正在发生的 traffic.

@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
@@ -22,11 +21,15 @@ from charles_mcp.services import (
 from charles_mcp.tools import (
     ToolDependencies,
     attach_tool_dependencies,
-    backup_config as _backup_config,
     register_history_tools,
     register_legacy_tools,
     register_live_tools,
     register_reset_tools,
+)
+from charles_mcp.tools import (
+    backup_config as _backup_config,
+)
+from charles_mcp.tools import (
     restore_config as _restore_config,
 )
 
@@ -54,7 +57,7 @@ def _resolve_expose_legacy_tools(
 
 
 def create_server(
-    config: Optional[Config] = None,
+    config: Config | None = None,
     expose_legacy_tools: bool | None = None,
 ) -> FastMCP[ToolDependencies]:
     """

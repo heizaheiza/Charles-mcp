@@ -6,7 +6,7 @@ import logging
 import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Annotated, Any, Optional, cast
+from typing import Annotated, Any, cast
 
 from mcp.server.fastmcp import Context
 from pydantic import Field
@@ -89,7 +89,7 @@ RecordSeconds = Annotated[
 ]
 
 HostContains = Annotated[
-    Optional[str],
+    str | None,
     Field(
         description="按 host 子串过滤（包含匹配）。例如：api.example.com",
         json_schema_extra={"examples": ["api.example.com", "gateway", "mmtls"]},
@@ -97,7 +97,7 @@ HostContains = Annotated[
 ]
 
 HttpMethodFilter = Annotated[
-    Optional[str],
+    str | None,
     Field(
         description=(
             "HTTP 方法过滤。仅允许标准 HTTP 方法。"
@@ -108,7 +108,7 @@ HttpMethodFilter = Annotated[
 ]
 
 KeywordRegex = Annotated[
-    Optional[str],
+    str | None,
     Field(
         description=(
             "用于搜索请求/响应内容的 Python 正则表达式。"
@@ -154,7 +154,7 @@ def seconds_input_error(
     value: int,
     max_allowed: int,
     retry_example: str,
-) -> Optional[list[dict]]:
+) -> list[dict] | None:
     if value < 0:
         return build_tool_guidance_error(
             parameter=parameter,
@@ -185,7 +185,7 @@ def seconds_input_error(
     return None
 
 
-def normalize_http_method(method: Optional[str]) -> tuple[Optional[str], Optional[list[dict]]]:
+def normalize_http_method(method: str | None) -> tuple[str | None, list[dict] | None]:
     if method is None:
         return (None, None)
 
@@ -208,7 +208,7 @@ def normalize_http_method(method: Optional[str]) -> tuple[Optional[str], Optiona
     return (method_clean, None)
 
 
-def normalize_text_filter(value: Optional[str]) -> Optional[str]:
+def normalize_text_filter(value: str | None) -> str | None:
     if value is None:
         return None
     cleaned = value.strip()
@@ -330,28 +330,28 @@ async def get_proxy_data(
 def build_traffic_query(
     *,
     preset: TrafficPreset = "api_focus",
-    host_contains: Optional[str] = None,
-    path_contains: Optional[str] = None,
-    method_in: Optional[list[str]] = None,
-    status_in: Optional[list[int]] = None,
-    resource_class_in: Optional[list[str]] = None,
-    min_priority_score: Optional[int] = None,
-    request_body_contains: Optional[str] = None,
-    response_body_contains: Optional[str] = None,
-    request_header_name: Optional[str] = None,
-    request_header_value_contains: Optional[str] = None,
-    response_header_name: Optional[str] = None,
-    response_header_value_contains: Optional[str] = None,
-    request_content_type: Optional[str] = None,
-    response_content_type: Optional[str] = None,
-    request_json_query: Optional[str] = None,
-    response_json_query: Optional[str] = None,
+    host_contains: str | None = None,
+    path_contains: str | None = None,
+    method_in: list[str] | None = None,
+    status_in: list[int] | None = None,
+    resource_class_in: list[str] | None = None,
+    min_priority_score: int | None = None,
+    request_body_contains: str | None = None,
+    response_body_contains: str | None = None,
+    request_header_name: str | None = None,
+    request_header_value_contains: str | None = None,
+    response_header_name: str | None = None,
+    response_header_value_contains: str | None = None,
+    request_content_type: str | None = None,
+    response_content_type: str | None = None,
+    request_json_query: str | None = None,
+    response_json_query: str | None = None,
     include_body_preview: bool = True,
     max_items: int = 20,
     max_preview_chars: int = 256,
     max_headers_per_side: int = 8,
     scan_limit: int = 500,
-    since_seconds: Optional[int] = None,
+    since_seconds: int | None = None,
 ) -> TrafficQuery:
     valid_resource_classes: set[ResourceClass] = {
         "api_candidate",
