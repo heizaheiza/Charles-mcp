@@ -33,6 +33,12 @@ Do not treat this server as a raw packet dump interface.
    when the user explicitly references a `.chlsj` file or 历史录包.
 5. When unsure which plane to use, call `charles_status` first and follow its
    `recommended_next_action`.
+6. **Never clear the user's Charles session unless the user explicitly asks.**
+   `start_live_capture` defaults to adopting the user's ongoing session and
+   preserves the traffic already captured there. Only pass `reset_session=true`
+   when the user explicitly asks to clear / wipe / 清空 the session before
+   starting a fresh capture. A wrongly-passed `reset_session=true` destroys
+   the user's in-progress data and is not recoverable from this server.
 
 ---
 

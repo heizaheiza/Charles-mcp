@@ -58,16 +58,26 @@ class LiveCaptureService:
     async def start(
         self,
         *,
-        reset_session: bool = True,
+        reset_session: bool = False,
         include_existing: bool = False,
         adopt_existing: bool = False,
+        start_recording_if_stopped: bool = False,
     ) -> LiveCaptureStartResult:
-        managed = not adopt_existing
+        # Explicit reset_session=True wins over adopt_existing=True so an
+        # agent that asks for a wipe always gets one, even if a caller above
+        # this layer is using adopt_existing as the safe default.
+        effective_adopt = adopt_existing and not reset_session
+        managed = not effective_adopt
         baseline_items: list[dict] = []
 
         client = await self._get_shared_client()
-        if adopt_existing:
+        if effective_adopt:
             baseline_items = await client.export_session_json()
+            # The user's existing session is the source of truth. We do not
+            # clear it. start_recording is idempotent — call it only when the
+            # caller wants us to ensure Charles is actively recording.
+            if start_recording_if_stopped and not await client.start_recording():
+                raise CharlesClientError("failed to start Charles recording")
         else:
             if not reset_session:
                 baseline_items = await client.export_session_json()
