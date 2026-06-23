@@ -57,6 +57,11 @@ class SQLiteStore:
         conn = sqlite3.connect(self.path, check_same_thread=False, isolation_level=None)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON")
+        # WAL improves concurrent reader/writer throughput for the reverse
+        # ingest / replay / live workflows. synchronous=NORMAL keeps WAL safe
+        # under power loss while avoiding fsync on every commit.
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA synchronous = NORMAL")
         return conn
 
     @contextmanager
@@ -244,6 +249,22 @@ class SQLiteStore:
                 CREATE INDEX IF NOT EXISTS idx_artifacts_body_blob_id ON decoded_artifacts(body_blob_id);
                 CREATE INDEX IF NOT EXISTS idx_runs_experiment_id ON runs(experiment_id);
                 CREATE INDEX IF NOT EXISTS idx_findings_subject ON findings(subject_type, subject_id);
+
+                -- Composite index covering the dominant list_entries access
+                -- pattern: filter by capture_id then ORDER BY sequence_no.
+                -- SQLite can satisfy both filter and order from this single
+                -- index without an extra sort step.
+                CREATE INDEX IF NOT EXISTS idx_entries_capture_sequence
+                    ON entries(capture_id, sequence_no);
+
+                -- Speeds up status_in / min_sequence_no combined with capture_id.
+                CREATE INDEX IF NOT EXISTS idx_entries_capture_status
+                    ON entries(capture_id, status_code);
+
+                -- Expression index for the UPPER(method) IN (...) filter; the
+                -- query writes UPPER(method) so the index must match that form.
+                CREATE INDEX IF NOT EXISTS idx_entries_capture_method_upper
+                    ON entries(capture_id, UPPER(method));
                 """
             )
 
