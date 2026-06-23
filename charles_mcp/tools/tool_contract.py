@@ -351,6 +351,7 @@ def build_traffic_query(
     max_preview_chars: int = 256,
     max_headers_per_side: int = 8,
     scan_limit: int = 500,
+    since_seconds: Optional[int] = None,
 ) -> TrafficQuery:
     valid_resource_classes: set[ResourceClass] = {
         "api_candidate",
@@ -391,4 +392,5 @@ def build_traffic_query(
         max_preview_chars=max_preview_chars,
         max_headers_per_side=max_headers_per_side,
         scan_limit=scan_limit,
+        since_seconds=since_seconds,
     )

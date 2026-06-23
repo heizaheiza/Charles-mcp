@@ -37,3 +37,7 @@ class TrafficQuery(BaseModel):
     max_preview_chars: int = Field(default=256, ge=32, le=4096)
     max_headers_per_side: int = Field(default=8, ge=1, le=32)
     scan_limit: int = Field(default=500, ge=1, le=5000)
+    # When set, only entries whose times.start is within the last N seconds
+    # (relative to "now" at query time) are scanned. None preserves the
+    # legacy behavior of scanning every raw entry in the capture.
+    since_seconds: int | None = Field(default=None, ge=1, le=86400)

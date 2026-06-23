@@ -182,6 +182,7 @@ def register_live_tools(mcp: FastMCP) -> None:
         max_preview_chars: int = 128,
         max_headers_per_side: int = 6,
         scan_limit: int = 500,
+        since_seconds: Optional[int] = None,
     ) -> TrafficQueryResult:
         """Analyze the active live capture with structured summary-first filtering.
         This is the RECOMMENDED tool for inspecting live / ongoing / 正在发生的 traffic.
@@ -190,7 +191,12 @@ def register_live_tools(mcp: FastMCP) -> None:
         Use this summary path before calling get_traffic_entry_detail.
         Does NOT advance the cursor — safe to call repeatedly with different filters.
         Default cursor=0 scans all captured data from the beginning.
-        Use get_traffic_entry_detail to drill down into a specific entry_id."""
+        Use get_traffic_entry_detail to drill down into a specific entry_id.
+
+        Pass `since_seconds=N` to look only at traffic captured in the last N
+        seconds (relative to "now" at query time). This is the preferred
+        shortcut when the user asks for "刚才 / 最近 / just now" traffic and
+        removes the need to thread the cursor through follow-up calls."""
         deps = get_tool_dependencies(ctx)
         query = build_traffic_query(
             preset=preset,
@@ -215,6 +221,7 @@ def register_live_tools(mcp: FastMCP) -> None:
             max_preview_chars=max_preview_chars,
             max_headers_per_side=max_headers_per_side,
             scan_limit=scan_limit,
+            since_seconds=since_seconds,
         )
         return await deps.traffic_query_service.analyze_live_capture(
             capture_id=capture_id,

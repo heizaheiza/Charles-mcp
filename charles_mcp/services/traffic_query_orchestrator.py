@@ -364,8 +364,18 @@ class TrafficQueryOrchestrator:
     ) -> PreparedTrafficEntries:
         warnings = list(initial_warnings or [])
         total_items = total_items if total_items is not None else len(raw_entries)
-        scanned_entries = raw_entries[: query.scan_limit]
-        truncated = already_truncated or total_items > query.scan_limit
+        # since_seconds: apply BEFORE scan_limit so the window decides what to
+        # consider, not the buffer slice. When unset the fast path leaves
+        # raw_entries untouched and pays zero overhead.
+        if query.since_seconds is not None:
+            window_filtered = self._filter_by_since_seconds(
+                raw_entries, since_seconds=query.since_seconds
+            )
+            scanned_entries = window_filtered[: query.scan_limit]
+            truncated = already_truncated or len(window_filtered) > query.scan_limit
+        else:
+            scanned_entries = raw_entries[: query.scan_limit]
+            truncated = already_truncated or total_items > query.scan_limit
         if truncated:
             warnings.append("scan_limit_reached")
 
@@ -479,6 +489,42 @@ class TrafficQueryOrchestrator:
         if not include_full_body:
             return SUMMARY_BODY_MODE
         return f"full:{max_body_chars}"
+
+    @staticmethod
+    def _filter_by_since_seconds(
+        raw_entries: list[dict],
+        *,
+        since_seconds: int,
+    ) -> list[dict]:
+        """Return entries whose times.start falls within the trailing window.
+
+        Entries with an unparseable or missing times.start are kept so
+        in-flight items are not silently dropped. Comparison is done with
+        timezone-aware datetimes; if the entry timestamp is naive it is
+        treated as UTC to match Charles' default export format.
+        """
+        from datetime import datetime, timezone
+
+        threshold = datetime.now(timezone.utc).timestamp() - since_seconds
+        kept: list[dict] = []
+        for raw in raw_entries:
+            if not isinstance(raw, dict):
+                continue
+            times = raw.get("times") if isinstance(raw.get("times"), dict) else {}
+            start_value = times.get("start") if isinstance(times, dict) else None
+            if not isinstance(start_value, str) or not start_value:
+                kept.append(raw)
+                continue
+            try:
+                parsed = datetime.fromisoformat(start_value.replace("Z", "+00:00"))
+            except ValueError:
+                kept.append(raw)
+                continue
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            if parsed.timestamp() >= threshold:
+                kept.append(raw)
+        return kept
 
     @staticmethod
     def _normalize_scope_key(
