@@ -34,3 +34,34 @@ async def test_representative_high_frequency_tools_expose_core_guidance_semantic
     for tool_name, keywords in expected_keywords.items():
         assert tool_name in by_name
         _assert_contains_keywords(by_name[tool_name], keywords)
+
+
+@pytest.mark.asyncio
+async def test_live_first_preference_keywords_are_present_to_steer_agents() -> None:
+    """Guard against description drift that would let agents default to history.
+
+    Live entry-point tools must signal they are the preferred path for ongoing
+    traffic; history-plane tools must signal they are opt-in for explicit
+    saved-recording references.
+    """
+    server = create_server()
+    tools = await server.list_tools()
+    by_name = {tool.name: (tool.description or "") for tool in tools}
+
+    live_preference: dict[str, tuple[str, ...]] = {
+        "start_live_capture": ("prefer this tool", "ongoing", ".chlsj"),
+        "query_live_capture_entries": ("recommended", "ongoing"),
+    }
+    for tool_name, keywords in live_preference.items():
+        assert tool_name in by_name
+        _assert_contains_keywords(by_name[tool_name], keywords)
+
+    history_optin: dict[str, tuple[str, ...]] = {
+        "analyze_recorded_traffic": ("history-plane tool", "explicitly references", ".chlsj"),
+        "query_recorded_traffic": ("history-plane tool", "explicitly references", ".chlsj"),
+        "list_recordings": ("history-plane tool", "explicitly references", ".chlsj"),
+        "get_recording_snapshot": ("history-plane tool", "explicitly references", ".chlsj"),
+    }
+    for tool_name, keywords in history_optin.items():
+        assert tool_name in by_name
+        _assert_contains_keywords(by_name[tool_name], keywords)

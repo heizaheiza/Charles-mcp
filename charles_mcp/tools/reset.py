@@ -69,7 +69,10 @@ def register_reset_tools(mcp: FastMCP) -> None:
 
     @mcp.tool()
     async def charles_status(ctx: ToolContext) -> CharlesStatusResult:
-        """Check Charles connectivity and active live-capture state."""
+        """Check Charles connectivity and active live-capture state.
+        Returns recommended_next_action to nudge agents toward the live plane:
+        when no active capture exists, agents should start_live_capture before
+        falling back to history-plane tools."""
         logger.info("Tool called: charles_status()")
         deps = get_tool_dependencies(ctx)
 
@@ -96,5 +99,24 @@ def register_reset_tools(mcp: FastMCP) -> None:
         except CharlesClientError as exc:
             result.connected = False
             result.error = str(exc)
+
+        if not result.connected:
+            result.recommended_next_action = (
+                "Charles is unreachable. Confirm Charles Proxy is running and the "
+                "Web Interface is enabled before retrying."
+            )
+        elif active_capture is None:
+            result.recommended_next_action = (
+                "No active live capture. For ongoing / 实时 traffic, call "
+                "start_live_capture first and reuse its capture_id. Only call "
+                "list_recordings / query_recorded_traffic when the user "
+                "explicitly references a saved recording (.chlsj)."
+            )
+        else:
+            result.recommended_next_action = (
+                f"Active capture detected (capture_id={active_capture['capture_id']}). "
+                "Use query_live_capture_entries for structured filtering, then "
+                "get_traffic_entry_detail to drill down into one confirmed entry_id."
+            )
 
         return result

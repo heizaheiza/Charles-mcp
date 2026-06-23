@@ -65,6 +65,10 @@ def register_live_tools(mcp: FastMCP) -> None:
         adopt_existing: bool = False,
     ) -> LiveCaptureStartResult:
         """Start or adopt a live capture session for incremental polling.
+        PREFER THIS TOOL when the user wants to inspect ongoing / just-now / 正在发生的 traffic.
+        This is the default entry point for live-plane analysis;
+        do NOT default to list_recordings or query_recorded_traffic
+        unless the user explicitly names a saved recording (.chlsj) or 历史录包.
         Returns a capture_id required by all other live tools.
         Preserve and reuse capture_id across follow-up live calls.
         Use adopt_existing=true to take over an ongoing Charles session without clearing it."""
@@ -168,7 +172,9 @@ def register_live_tools(mcp: FastMCP) -> None:
         scan_limit: int = 500,
     ) -> TrafficQueryResult:
         """Analyze the active live capture with structured summary-first filtering.
-        This is the RECOMMENDED tool for inspecting live traffic.
+        This is the RECOMMENDED tool for inspecting live / ongoing / 正在发生的 traffic.
+        Prefer this over query_recorded_traffic / analyze_recorded_traffic
+        unless the user explicitly names a saved recording (.chlsj).
         Use this summary path before calling get_traffic_entry_detail.
         Does NOT advance the cursor — safe to call repeatedly with different filters.
         Default cursor=0 scans all captured data from the beginning.

@@ -26,6 +26,13 @@ Do not treat this server as a raw packet dump interface.
    - reverse live-analysis plane: `live_session_id`
 2. Preserve and reuse returned identifiers between calls.
 3. Do not infer cross-plane identity fallback in agent logic.
+4. **Default plane = live.** When the user asks about ongoing / just-now /
+   现在 / 正在发生的 traffic without explicitly naming a saved recording,
+   start with `start_live_capture` and stay on the live plane. Only switch to
+   `list_recordings` / `query_recorded_traffic` / `analyze_recorded_traffic`
+   when the user explicitly references a `.chlsj` file or 历史录包.
+5. When unsure which plane to use, call `charles_status` first and follow its
+   `recommended_next_action`.
 
 ---
 

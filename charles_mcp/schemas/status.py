@@ -42,3 +42,4 @@ class CharlesStatusResult(BaseModel):
     connected: bool
     charles_info: dict[str, Any] | None = None
     error: str | None = None
+    recommended_next_action: str | None = None

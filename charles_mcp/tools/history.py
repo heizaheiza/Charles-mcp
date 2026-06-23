@@ -61,7 +61,10 @@ def register_history_tools(mcp: FastMCP) -> None:
         scan_limit: int = 500,
     ) -> TrafficQueryResult:
         """Analyze a saved recording snapshot with compact summaries.
-        This is a history-plane tool; preserve recording_path for follow-up detail calls.
+        HISTORY-PLANE TOOL — only use when the user explicitly references a saved
+        recording (.chlsj file or 历史录包). For ongoing / 实时 traffic, prefer
+        start_live_capture + query_live_capture_entries instead.
+        Preserve recording_path for follow-up detail calls.
         Returns structured TrafficSummary items with matched_fields and match_reasons.
         Use get_traffic_entry_detail to drill down into a specific entry_id afterwards."""
         deps = get_tool_dependencies(ctx)
@@ -212,7 +215,10 @@ def register_history_tools(mcp: FastMCP) -> None:
         keep_request: bool = True,
         keep_response: bool = True,
     ) -> RecordedTrafficQueryResult:
-        """Query the latest saved recording. This tool never reads the live Charles session."""
+        """Query the latest saved recording. This tool never reads the live Charles session.
+        HISTORY-PLANE TOOL — only use when the user explicitly references a saved
+        recording (.chlsj file or 历史录包). For ongoing / 实时 traffic, prefer
+        start_live_capture + query_live_capture_entries instead."""
         deps = get_tool_dependencies(ctx)
         host_contains_normalized = normalize_text_filter(host_contains)
         method_normalized, method_error = normalize_http_method(http_method)
@@ -245,6 +251,9 @@ def register_history_tools(mcp: FastMCP) -> None:
     @mcp.tool()
     async def list_recordings(ctx: ToolContext) -> RecordingListResult:
         """List saved recording files using an explicit history-oriented tool name.
+        HISTORY-PLANE TOOL — only use when the user explicitly references saved
+        recordings (.chlsj files or 历史录包). For ongoing / 实时 traffic, prefer
+        start_live_capture instead.
         Start history analysis here, then preserve recording_path for summary/detail calls."""
         deps = get_tool_dependencies(ctx)
         return deps.history_service.list_recordings_result()
@@ -254,7 +263,9 @@ def register_history_tools(mcp: FastMCP) -> None:
         ctx: ToolContext,
         path: Optional[str] = None,
     ) -> RecordingSnapshotResult:
-        """Load a saved recording snapshot. This tool never reads the live Charles session."""
+        """Load a saved recording snapshot. This tool never reads the live Charles session.
+        HISTORY-PLANE TOOL — only use when the user explicitly references a saved
+        recording (.chlsj file or 历史录包)."""
         deps = get_tool_dependencies(ctx)
         try:
             return await deps.history_service.get_snapshot_result(path)

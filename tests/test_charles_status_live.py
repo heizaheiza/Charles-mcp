@@ -64,3 +64,22 @@ async def test_charles_status_reports_active_live_capture(
     assert status["connected"] is True
     assert status["live_capture"]["active_capture"]["capture_id"] == started["capture_id"]
     assert status["live_capture"]["active_capture"]["status"] == "active"
+    assert status["recommended_next_action"]
+    assert "query_live_capture_entries" in status["recommended_next_action"]
+    assert started["capture_id"] in status["recommended_next_action"]
+
+
+@pytest.mark.asyncio
+async def test_charles_status_recommends_start_live_capture_when_idle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_client = _fake_client_class()
+    monkeypatch.setattr(server_module, "CharlesClient", fake_client)
+
+    server = create_server()
+    status = _tool_result(await server.call_tool("charles_status", {}))
+
+    assert status["connected"] is True
+    assert status["live_capture"]["active_capture"] is None
+    assert status["recommended_next_action"]
+    assert "start_live_capture" in status["recommended_next_action"]
