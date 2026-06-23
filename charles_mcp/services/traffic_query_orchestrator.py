@@ -1,11 +1,18 @@
 from __future__ import annotations
 
 from collections import Counter
+from hashlib import sha1
 from typing import cast
 
 from charles_mcp.analyzers.resource_classifier import classify_entry
 from charles_mcp.schemas.analysis import TrafficDetailResult, TrafficQueryResult
-from charles_mcp.schemas.traffic import CaptureSource, ResourceClass, TrafficEntry, TrafficMatch
+from charles_mcp.schemas.traffic import (
+    CaptureSource,
+    ResourceClass,
+    ResourceClassification,
+    TrafficEntry,
+    TrafficMatch,
+)
 from charles_mcp.schemas.traffic_query import TrafficQuery
 from charles_mcp.services.history_capture import RecordingHistoryService
 from charles_mcp.services.live_capture import LiveCaptureService
@@ -13,6 +20,11 @@ from charles_mcp.services.traffic_analysis import TrafficAnalysisService
 from charles_mcp.services.traffic_cache import SUMMARY_BODY_MODE, TrafficEntryCache
 from charles_mcp.services.traffic_normalizer import TrafficNormalizer
 from charles_mcp.services.traffic_query_models import PreparedTrafficEntries
+
+# Cached normalize/classify result. entry=None means the raw entry was
+# excluded by the preset and never normalized; we still cache the
+# classification so subsequent passes do not re-run classify_entry.
+_NormalizeCacheValue = tuple[ResourceClassification, TrafficEntry | None]
 
 
 class TrafficQueryOrchestrator:
@@ -32,6 +44,19 @@ class TrafficQueryOrchestrator:
         self.normalizer = normalizer
         self.analysis_service = analysis_service
         self.entry_cache = entry_cache
+        # Diff cache keyed by (source, identity, query_shape) -> raw_hash -> value.
+        # Lets repeated live polls reuse normalize/classify output for entries
+        # whose stable routing fields are unchanged since the previous call.
+        self._normalize_cache: dict[
+            tuple[str, str, bool, int, int],
+            dict[str, _NormalizeCacheValue],
+        ] = {}
+        self.normalize_cache_stats: dict[str, int] = {"hits": 0, "misses": 0}
+
+    def reset_normalize_cache(self) -> None:
+        """Drop all cached normalize/classify results (used in tests)."""
+        self._normalize_cache.clear()
+        self.normalize_cache_stats = {"hits": 0, "misses": 0}
 
     async def analyze_live_capture(
         self,
@@ -357,34 +382,75 @@ class TrafficQueryOrchestrator:
         matched_entries: list[tuple[TrafficEntry, TrafficMatch]] = []
         detail_entries: dict[str, TrafficEntry] = {}
 
+        identity = capture_id if source == "live" else recording_path
+        scope_key = self._normalize_scope_key(
+            source=source,
+            identity=identity,
+            needs_body_search=needs_body_search,
+            max_preview_chars=effective_query.max_preview_chars,
+            max_headers_per_side=effective_query.max_headers_per_side,
+        )
+        scope_cache: dict[str, _NormalizeCacheValue] | None = (
+            self._normalize_cache.setdefault(scope_key, {}) if scope_key is not None else None
+        )
+        seen_hashes: set[str] = set()
+
         for raw in scanned_entries:
             if not isinstance(raw, dict):
                 continue
-            classification = classify_entry(raw)
+
+            raw_hash = self._stable_raw_entry_hash(raw)
+            if scope_cache is not None:
+                seen_hashes.add(raw_hash)
+
+            cached = scope_cache.get(raw_hash) if scope_cache is not None else None
+            if cached is not None:
+                classification, entry = cached
+                self.normalize_cache_stats["hits"] += 1
+            else:
+                classification = classify_entry(raw)
+                if self._excluded_by_preset(classification.resource_class, effective_query):
+                    entry = None
+                else:
+                    entry = self.normalizer.normalize_entry(
+                        raw,
+                        capture_source=source,
+                        capture_id=capture_id,
+                        recording_path=recording_path,
+                        include_full_body=needs_body_search,
+                        max_preview_chars=effective_query.max_preview_chars,
+                        max_headers_per_side=effective_query.max_headers_per_side,
+                        max_full_body_chars=(
+                            self._body_match_chars(raw) if needs_body_search else 4096
+                        ),
+                        classification=classification,
+                    )
+                if scope_cache is not None:
+                    # Cache the entry with full body intact so subsequent
+                    # body_contains matches can still see it. The compact
+                    # form is only used for downstream storage, not matching.
+                    scope_cache[raw_hash] = (classification, entry)
+                self.normalize_cache_stats["misses"] += 1
+
             classified_counts[classification.resource_class] += 1
 
-            if self._excluded_by_preset(classification.resource_class, effective_query):
+            if entry is None:
                 filtered_out_by_class[classification.resource_class] += 1
                 continue
 
-            entry = self.normalizer.normalize_entry(
-                raw,
-                capture_source=source,
-                capture_id=capture_id,
-                recording_path=recording_path,
-                include_full_body=needs_body_search,
-                max_preview_chars=effective_query.max_preview_chars,
-                max_headers_per_side=effective_query.max_headers_per_side,
-                max_full_body_chars=self._body_match_chars(raw) if needs_body_search else 4096,
-                classification=classification,
-            )
             match = self.analysis_service.match_entry(entry, effective_query)
-            compact_entry = self._compact_entry_for_cache(entry) if needs_body_search else entry
-            detail_entries[compact_entry.entry_id] = compact_entry
+            storage_entry = (
+                self._compact_entry_for_cache(entry) if needs_body_search else entry
+            )
+            detail_entries[storage_entry.entry_id] = storage_entry
             if match.matched:
-                matched_entries.append((compact_entry, match))
+                matched_entries.append((storage_entry, match))
 
-        identity = capture_id if source == "live" else recording_path
+        if scope_cache is not None:
+            stale_hashes = set(scope_cache.keys()) - seen_hashes
+            for stale_hash in stale_hashes:
+                scope_cache.pop(stale_hash, None)
+
         if identity:
             self.entry_cache.put(
                 source=source,
@@ -413,6 +479,47 @@ class TrafficQueryOrchestrator:
         if not include_full_body:
             return SUMMARY_BODY_MODE
         return f"full:{max_body_chars}"
+
+    @staticmethod
+    def _normalize_scope_key(
+        *,
+        source: CaptureSource,
+        identity: str | None,
+        needs_body_search: bool,
+        max_preview_chars: int,
+        max_headers_per_side: int,
+    ) -> tuple[str, str, bool, int, int] | None:
+        # Without an identity we cannot safely correlate entries across calls;
+        # disable the cache rather than risk cross-capture contamination.
+        if not identity:
+            return None
+        return (source, identity, needs_body_search, max_preview_chars, max_headers_per_side)
+
+    @staticmethod
+    def _stable_raw_entry_hash(raw_entry: dict) -> str:
+        """Stable fingerprint of a raw Charles entry's routing fields.
+
+        Excludes capture identity because the normalize cache is already
+        partitioned by (source, identity). The fields chosen match what
+        Charles fills in once a response is fully captured, so the hash
+        only stays stable for completed entries.
+        """
+        times_raw = raw_entry.get("times")
+        times = times_raw if isinstance(times_raw, dict) else {}
+        response_raw = raw_entry.get("response")
+        response = response_raw if isinstance(response_raw, dict) else {}
+        components = [
+            str(raw_entry.get("host") or ""),
+            str(raw_entry.get("method") or ""),
+            str(raw_entry.get("path") or ""),
+            str(raw_entry.get("query") or ""),
+            str(raw_entry.get("status") or ""),
+            str(response.get("status") or ""),
+            str(times.get("start") or ""),
+            str(times.get("end") or ""),
+            str(raw_entry.get("totalSize") or ""),
+        ]
+        return sha1("|".join(components).encode("utf-8")).hexdigest()
 
     @staticmethod
     def _body_match_chars(raw_entry: dict) -> int:

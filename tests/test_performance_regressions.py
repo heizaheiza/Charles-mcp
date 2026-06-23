@@ -124,3 +124,98 @@ async def test_query_service_classifies_each_entry_once(monkeypatch: pytest.Monk
 
     assert query_classify_calls == 1
     assert normalizer_classify_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_normalize_diff_cache_reuses_unchanged_entries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Repeated polls over the same raw entries should hit the diff cache.
+
+    On the second pass classify_entry must never be called and normalize_entry
+    must be skipped because both results are reused from the cache. This
+    locks in the optimization that lets agents poll query_live_capture_entries
+    repeatedly without re-doing CPU work for unchanged traffic.
+    """
+    from charles_mcp.analyzers.resource_classifier import classify_entry as real_classify
+
+    classify_calls = 0
+
+    def _counting_classify(entry: dict):
+        nonlocal classify_calls
+        classify_calls += 1
+        return real_classify(entry)
+
+    monkeypatch.setattr(
+        "charles_mcp.services.traffic_query_orchestrator.classify_entry",
+        _counting_classify,
+    )
+
+    entries = [_entry("/api/login"), _entry("/api/profile"), _entry("/api/wallet")]
+    service = TrafficQueryService(
+        live_service=_FakeLiveService(),
+        history_service=_FakeHistoryService(entries),
+        normalizer=TrafficNormalizer(Config()),
+        analysis_service=TrafficAnalysisService(),
+    )
+
+    # Warm-up: every entry should be classified + normalized exactly once.
+    await service.analyze_recorded_traffic(recording_path=None, query=TrafficQuery())
+    assert classify_calls == len(entries)
+    stats_after_warmup = dict(service.orchestrator.normalize_cache_stats)
+    assert stats_after_warmup["misses"] == len(entries)
+    assert stats_after_warmup["hits"] == 0
+
+    # Reset call counters and replay the exact same query.
+    classify_calls = 0
+    normalize_calls = 0
+    real_normalize = service.orchestrator.normalizer.normalize_entry
+
+    def _counting_normalize(*args, **kwargs):
+        nonlocal normalize_calls
+        normalize_calls += 1
+        return real_normalize(*args, **kwargs)
+
+    monkeypatch.setattr(
+        service.orchestrator.normalizer,
+        "normalize_entry",
+        _counting_normalize,
+    )
+
+    await service.analyze_recorded_traffic(recording_path=None, query=TrafficQuery())
+
+    # Every entry should now be served from cache.
+    assert classify_calls == 0
+    assert normalize_calls == 0
+    final_stats = service.orchestrator.normalize_cache_stats
+    assert final_stats["hits"] == len(entries)
+    assert final_stats["misses"] == stats_after_warmup["misses"]
+
+
+@pytest.mark.asyncio
+async def test_normalize_diff_cache_evicts_disappeared_entries() -> None:
+    """If a raw entry vanishes between calls, its cached value must be dropped.
+
+    Otherwise the cache would grow unbounded across a long live session.
+    """
+    initial = [_entry("/api/login"), _entry("/api/profile")]
+    reduced = [_entry("/api/login")]
+    history_service = _FakeHistoryService(initial)
+    service = TrafficQueryService(
+        live_service=_FakeLiveService(),
+        history_service=history_service,
+        normalizer=TrafficNormalizer(Config()),
+        analysis_service=TrafficAnalysisService(),
+    )
+
+    await service.analyze_recorded_traffic(recording_path=None, query=TrafficQuery())
+    scope_caches = list(service.orchestrator._normalize_cache.values())
+    assert len(scope_caches) == 1
+    assert len(scope_caches[0]) == len(initial)
+
+    history_service.items = list(reduced)
+    await service.analyze_recorded_traffic(recording_path=None, query=TrafficQuery())
+
+    scope_caches_after = list(service.orchestrator._normalize_cache.values())
+    assert len(scope_caches_after) == 1
+    assert len(scope_caches_after[0]) == len(reduced)
