@@ -119,3 +119,54 @@ async def test_query_recorded_traffic_only_uses_history_snapshot(
     assert result["source"] == "history"
     assert result["total_items"] == 1
     assert [item["path"] for item in result["items"]] == ["/history-only"]
+
+
+@pytest.mark.asyncio
+async def test_start_live_capture_default_adopts_and_never_clears(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A zero-argument start_live_capture must NEVER wipe the user's session.
+
+    The previous default cleared Charles' current session, destroying the
+    traffic the user was already recording. The new default adopts the
+    ongoing session and only ensures Charles is recording.
+    """
+    fake_client = _fake_client_class()
+    fake_client.current_export = [_entry(path="/preexisting")]
+
+    monkeypatch.setattr(server_module, "CharlesClient", fake_client)
+
+    server = create_server()
+    started = _tool_result(await server.call_tool("start_live_capture", {}))
+
+    assert started["status"] == "active"
+    # The user's pre-existing traffic must NOT be cleared.
+    assert "clear" not in fake_client.calls
+    # The Charles export endpoint must be called so we adopt baseline state.
+    assert "export" in fake_client.calls
+    # start_recording is idempotent and must be called so adopted sessions
+    # whose recording was paused start capturing again.
+    assert "start" in fake_client.calls
+
+
+@pytest.mark.asyncio
+async def test_start_live_capture_with_explicit_reset_session_still_clears(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When the user explicitly asks for a fresh capture, reset_session=true
+    must still wipe and restart, preserving the destructive opt-in path."""
+    fake_client = _fake_client_class()
+
+    monkeypatch.setattr(server_module, "CharlesClient", fake_client)
+
+    server = create_server()
+    started = _tool_result(
+        await server.call_tool(
+            "start_live_capture",
+            {"reset_session": True, "adopt_existing": False},
+        )
+    )
+
+    assert started["status"] == "active"
+    assert "clear" in fake_client.calls
+    assert "start" in fake_client.calls

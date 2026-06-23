@@ -60,24 +60,36 @@ def register_live_tools(mcp: FastMCP) -> None:
     @mcp.tool()
     async def start_live_capture(
         ctx: ToolContext,
-        reset_session: bool = True,
+        reset_session: bool = False,
         include_existing: bool = False,
-        adopt_existing: bool = False,
+        adopt_existing: bool = True,
+        start_recording_if_stopped: bool = True,
     ) -> LiveCaptureStartResult:
         """Start or adopt a live capture session for incremental polling.
         PREFER THIS TOOL when the user wants to inspect ongoing / just-now / 正在发生的 traffic.
         This is the default entry point for live-plane analysis;
         do NOT default to list_recordings or query_recorded_traffic
         unless the user explicitly names a saved recording (.chlsj) or 历史录包.
+
+        DEFAULT BEHAVIOR (safe): adopts the user's ongoing Charles session
+        WITHOUT clearing the traffic that is already there, and ensures Charles
+        is recording (start_recording is idempotent). The user's currently
+        captured traffic is preserved.
+
+        Pass reset_session=true ONLY when the user explicitly asks to clear /
+        wipe / 清空 the current Charles session before starting a fresh
+        capture (e.g. debugging a single isolated flow). Reset is destructive
+        and cannot be undone by this server.
+
         Returns a capture_id required by all other live tools.
-        Preserve and reuse capture_id across follow-up live calls.
-        Use adopt_existing=true to take over an ongoing Charles session without clearing it."""
+        Preserve and reuse capture_id across follow-up live calls."""
         deps = get_tool_dependencies(ctx)
         try:
             return await deps.live_service.start(
                 reset_session=reset_session,
                 include_existing=include_existing,
                 adopt_existing=adopt_existing,
+                start_recording_if_stopped=start_recording_if_stopped,
             )
         except Exception as exc:
             raise ValueError(str(exc)) from exc
