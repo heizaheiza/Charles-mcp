@@ -11,7 +11,7 @@ Example:
     >>> server.run(transport="stdio")
 """
 
-__version__ = "3.0.3"
+__version__ = "3.1.0rc1"
 __author__ = "heizaheiza"
 
 from charles_mcp.client import CharlesClient
